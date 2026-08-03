@@ -14,4 +14,4 @@ pluginManagement {
 }
 
 // Should match your modid
-rootProject.name = "caraca-customs"
+rootProject.name = "caraca_customs"

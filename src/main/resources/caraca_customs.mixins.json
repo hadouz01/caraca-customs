@@ -1,0 +1,19 @@
+{
+	"required": true,
+	"package": "com.caraca.customs.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"compat.BerryBushBlockMixin",
+		"compat.BerryMaxYieldMixin",
+		"compat.BerryBlockEntityYieldDropMixin",
+		"compat.BerryBlockEntityAccessor"
+	],
+	"client": [
+		"compat.BallComparisonCalculatorMixin",
+		"compat.BallMultiplierCalculatorMixin",
+		"compat.CatchRateFormulaMixin"
+	],
+	"injectors": {
+		"defaultRequire": 0
+	}
+}

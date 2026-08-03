@@ -1,0 +1,13 @@
+{
+    "type": "minecraft:crafting_shapeless",
+    "category": "misc",
+    "ingredients": [
+        {
+            "item": "cobblemon:ancient_roseate_ball"
+        }
+    ],
+    "result": {
+        "count": 1,
+        "id": "caraca_customs:ancient_roseate_ball"
+    }
+}

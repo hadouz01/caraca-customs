@@ -1,0 +1,41 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "wti",
+    "lcr",
+    "zbm"
+  ],
+  "key": {
+    "w": {
+      "tag": "#c:foods"
+    },
+    "t": {
+      "tag": "caraca_customs:tier_x_poke_ball_materials"
+    },
+    "i": {
+      "tag": "#c:foods"
+    },
+    "l": {
+      "item": "#c:foods"
+    },
+    "c": {
+      "item": "minecraft:milk_bucket"
+    },
+    "r": {
+      "item": "#c:foods"
+    },
+    "z": {
+      "item": "#c:foods"
+    },
+    "b": {
+      "item": "cobblemon:tumblestone"
+    },
+    "m": {
+      "item": "#c:foods"
+    }
+  },
+  "result": {
+    "count": 4,
+    "id": "caraca_customs:ancient_caraca_ball"
+  }
+}

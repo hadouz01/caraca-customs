@@ -1,0 +1,13 @@
+{
+    "type": "minecraft:crafting_shapeless",
+    "category": "misc",
+    "ingredients": [
+        {
+            "item": "cobblemon:verdant_ball"
+        }
+    ],
+    "result": {
+        "count": 1,
+        "id": "caraca_customs:verdant_ball"
+    }
+}

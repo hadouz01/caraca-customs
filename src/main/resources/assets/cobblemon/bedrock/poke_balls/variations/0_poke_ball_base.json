@@ -1,0 +1,13 @@
+{
+  "pokeball": "caraca_customs:poke_ball",
+  "order": 0,
+  "variations": [
+    {
+      "aspects": [],
+      "poser": "cobblemon:poke_ball",
+      "model": "cobblemon:poke_ball.geo",
+      "texture": "caraca_customs:textures/poke_balls/poke_ball.png",
+      "layers": []
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "wti",
+    "lcr",
+    "zbm"
+  ],
+  "key": {
+    "w": {
+      "tag": "minecraft:bread"
+    },
+    "t": {
+      "tag": "caraca_customs:tier_x_poke_ball_materials"
+    },
+    "i": {
+      "tag": "minecraft:bread"
+    },
+    "l": {
+      "item": "minecraft:bread"
+    },
+    "c": {
+      "item": "minecraft:milk_bucket"
+    },
+    "r": {
+      "item": "minecraft:bread"
+    },
+    "z": {
+      "item": "minecraft:bread"
+    },
+    "b": {
+      "item": "cobblemon:white_apricorn"
+    },
+    "m": {
+      "item": "minecraft:bread"
+    }
+  },
+  "result": {
+    "count": 4,
+    "id": "caraca_customs:caraca_ball"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "parent": "cobblemon:item/poke_ball_model",
+  "textures": {
+    "layer0": "caraca_customs:item/poke_balls/models/ultra_lime_ball"
+  }
+}
