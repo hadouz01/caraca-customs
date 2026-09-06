@@ -179,7 +179,7 @@
         {
           "type": "minecraft:item",
           "weight": 1,
-          "name": "caraca_customs:verdigris_ball",
+          "name": "caraca_customs:aquamarine_ball",
           "functions": [
             {
               "function": "minecraft:set_count",

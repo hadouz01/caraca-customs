@@ -1,6 +1,7 @@
 package com.caraca.customs.config
 
 import com.caraca.customs.balls.CustomBallRegistry
+import com.caraca.customs.balls.modules.BallTier
 import com.cobblemon.mod.common.api.berry.Berries
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -94,7 +95,11 @@ data class ConfigData(
  */
 object DynamicConfig {
 
-    private const val MAX_YIELD_CAP = 6
+    /**
+     * Highest berry yield the mod assigns to a tree, Rich Mulch boost included.
+     */
+    const val MAX_YIELD_CAP = 6
+
     private const val GLOBAL_MIN_YIELD_BOUND = 1
     private const val GLOBAL_MIN_GROWTH_BOUND = 1
 
@@ -102,31 +107,29 @@ object DynamicConfig {
     private const val UNITARY_BALL_RATE_FLOOR = 0.0f
     private const val ABSOLUTE_BALL_RATE_CEILING = 10000.0f
 
+    private const val MIN_FORTUNE_CHANCE = 0.0f
+    private const val MAX_FORTUNE_CHANCE = 1.0f
+
     private val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
+    private val NETWORK_GSON: Gson = Gson()
     private val CONFIG_FILE: File = FabricLoader.getInstance().configDir
         .resolve("caraca_customs")
         .resolve("server_config.json")
         .toFile()
 
+    /**
+     * Every berry shipped by Cobblemon 1.8.4. Berries are datapack-driven and not yet loaded during
+     * mod initialization, so their identifiers are listed explicitly.
+     */
     private val ALL_BERRY_KEYS = listOf(
-        "cobblemon:aguav_berry", "cobblemon:apicot_berry", "cobblemon:aspear_berry", "cobblemon:babiri_berry",
-        "cobblemon:belue_berry", "cobblemon:bluk_berry", "cobblemon:charti_berry", "cobblemon:cheri_berry",
-        "cobblemon:chesto_berry", "cobblemon:chilan_berry", "cobblemon:chople_berry", "cobblemon:coba_berry",
-        "cobblemon:colbur_berry", "cobblemon:cornn_berry", "cobblemon:custap_berry", "cobblemon:durin_berry",
-        "cobblemon:figy_berry", "cobblemon:ganlon_berry", "cobblemon:grepa_berry", "cobblemon:haban_berry",
-        "cobblemon:hondew_berry", "cobblemon:iapapa_berry", "cobblemon:jaboca_berry", "cobblemon:kasib_berry",
-        "cobblemon:kebia_berry", "cobblemon:kee_berry", "cobblemon:kelpsy_berry", "cobblemon:lansat_berry",
-        "cobblemon:leppa_berry", "cobblemon:liechi_berry", "cobblemon:lum_berry", "cobblemon:mago_berry",
-        "cobblemon:magost_berry", "cobblemon:maranga_berry", "cobblemon:micle_berry", "cobblemon:nanab_berry",
-        "cobblemon:nomel_berry", "cobblemon:occa_berry", "cobblemon:oran_berry", "cobblemon:pamtre_berry",
-        "cobblemon:passho_berry", "cobblemon:payapa_berry", "cobblemon:pecha_berry", "cobblemon:persim_berry",
-        "cobblemon:petaya_berry", "cobblemon:pinap_berry", "cobblemon:pomeg_berry", "cobblemon:qualot_berry",
-        "cobblemon:rabuta_berry", "cobblemon:rawst_berry", "cobblemon:razz_berry", "cobblemon:rindo_berry",
-        "cobblemon:roseli_berry", "cobblemon:rowap_berry", "cobblemon:salac_berry", "cobblemon:shuca_berry",
-        "cobblemon:sitrus_berry", "cobblemon:spelon_berry", "cobblemon:starf_berry", "cobblemon:tamato_berry",
-        "cobblemon:tanga_berry", "cobblemon:wacan_berry", "cobblemon:watmel_berry", "cobblemon:wepear_berry",
-        "cobblemon:wiki_berry", "cobblemon:yache_berry"
-    )
+        "aguav", "apicot", "aspear", "babiri", "belue", "bluk", "charti", "cheri", "chesto", "chilan",
+        "chople", "coba", "colbur", "cornn", "custap", "durin", "eggant", "enigma", "figy", "ganlon",
+        "grepa", "haban", "hondew", "hopo", "iapapa", "jaboca", "kasib", "kebia", "kee", "kelpsy",
+        "lansat", "leppa", "liechi", "lum", "mago", "magost", "maranga", "micle", "nanab", "nomel",
+        "occa", "oran", "pamtre", "passho", "payapa", "pecha", "persim", "petaya", "pinap", "pomeg",
+        "qualot", "rabuta", "rawst", "razz", "rindo", "roseli", "rowap", "salac", "shuca", "sitrus",
+        "spelon", "starf", "tamato", "tanga", "touga", "wacan", "watmel", "wepear", "wiki", "yache"
+    ).map { "cobblemon:${it}_berry" }
 
     /**
      * Active configuration instance held in memory.
@@ -145,8 +148,9 @@ object DynamicConfig {
         }
 
         if (!CONFIG_FILE.exists()) {
+            data = ConfigData()
             populateMissingDefaults()
-            saveDefault()
+            save()
             return
         }
 
@@ -211,6 +215,7 @@ object DynamicConfig {
      * Normalizes global and individual overrides with bounds, floors, ceilings, and boosted values.
      */
     private fun sanitizeAndValidateEntries() {
+        data.globalHoeFortuneChance = data.globalHoeFortuneChance.coerceIn(MIN_FORTUNE_CHANCE, MAX_FORTUNE_CHANCE)
         sanitizeGlobalDefaultBerryConfig(data.defaultBerryConfig)
 
         data.berryOverrides.values.forEach { entry ->
@@ -353,7 +358,7 @@ object DynamicConfig {
      * @return Raw JSON string representation of the active configuration.
      */
     fun serializeToString(): String {
-        return GSON.toJson(data)
+        return NETWORK_GSON.toJson(data)
     }
 
     /**
@@ -365,42 +370,22 @@ object DynamicConfig {
      * @param json Valid JSON string received from the dedicated server's payload.
      */
     fun loadFromJsonString(json: String) {
-        runCatching {
-            val serverData = GSON.fromJson(json, ConfigData::class.java)
-            if (serverData != null) {
-                data = serverData
-                sanitizeAndValidateEntries()
-            }
-        }.onFailure {
-            // Silently ignore malformed network packets to prevent client crashes
-        }
+        val serverData = runCatching { GSON.fromJson(json, ConfigData::class.java) }.getOrNull() ?: return
+        data = serverData
+        sanitizeAndValidateEntries()
     }
 
     /**
-     * Determines the fallback default configuration category based on the Poké Ball identifier string.
-     *
-     * Priority:
-     * 1. Contains "caraca" -> [ConfigData.defaultCaracaBallConfig]
-     * 2. Contains "ultra" -> [ConfigData.defaultUltraPokeBallConfig]
-     * 3. Default -> [ConfigData.defaultRegularPokeBallConfig]
+     * Determines the fallback default configuration from the Poké Ball's [BallTier].
      *
      * @param cleanId Lowercase path identifier of the Poké Ball.
-     * @return Resolved default [PokeBallConfigEntry] for the matching category.
+     * @return Resolved default [PokeBallConfigEntry] for the ball's tier, or the regular one for unknown balls.
      */
     private fun resolveCategoryDefault(cleanId: String): PokeBallConfigEntry {
-        if (cleanId.contains("caraca")) {
-            return data.defaultCaracaBallConfig
+        return when (CustomBallRegistry.getBallByName(cleanId)?.props?.tier) {
+            BallTier.CARACA -> data.defaultCaracaBallConfig
+            BallTier.ULTRA -> data.defaultUltraPokeBallConfig
+            else -> data.defaultRegularPokeBallConfig
         }
-        if (cleanId.contains("ultra")) {
-            return data.defaultUltraPokeBallConfig
-        }
-        return data.defaultRegularPokeBallConfig
-    }
-
-    /**
-     * Writes the default configuration structure to disk.
-     */
-    private fun saveDefault() {
-        save()
     }
 }

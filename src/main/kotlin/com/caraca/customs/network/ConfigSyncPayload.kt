@@ -9,9 +9,7 @@ import net.minecraft.resources.ResourceLocation
 
 /**
  * Custom payload packet responsible for transmitting serialized configuration data
- * from the dedicated server to connecting clients.
- *
- * Implements [CustomPacketPayload] to hook into Fabric's modern 1.21.1 networking API.
+ * from the server to connecting clients.
  *
  * @property configJson The full serialized JSON string representing the server's ConfigData.
  *
@@ -20,12 +18,14 @@ import net.minecraft.resources.ResourceLocation
  */
 data class ConfigSyncPayload(val configJson: String) : CustomPacketPayload {
 
-    /**
-     * Resolves the static payload type descriptor for routing.
-     */
     override fun type(): CustomPacketPayload.Type<ConfigSyncPayload> = TYPE
 
     companion object {
+        /**
+         * Maximum accepted JSON length, well above the vanilla 32767 string limit.
+         */
+        private const val MAX_JSON_LENGTH = 262144
+
         /**
          * Unique network identifier for this specific packet.
          */
@@ -37,10 +37,10 @@ data class ConfigSyncPayload(val configJson: String) : CustomPacketPayload {
         val TYPE: CustomPacketPayload.Type<ConfigSyncPayload> = CustomPacketPayload.Type(ID)
 
         /**
-         * High-performance stream codec utilizing native UTF-8 string serialization.
+         * UTF-8 string codec carrying the configuration JSON.
          */
         val CODEC: StreamCodec<RegistryFriendlyByteBuf, ConfigSyncPayload> = StreamCodec.composite(
-            ByteBufCodecs.STRING_UTF8,
+            ByteBufCodecs.stringUtf8(MAX_JSON_LENGTH),
             ConfigSyncPayload::configJson,
             ::ConfigSyncPayload
         )

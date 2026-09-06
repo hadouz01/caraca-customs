@@ -46,10 +46,17 @@ dependencies {
 	modCompileOnly("com.terraformersmc:modmenu:11.0.1")
 
 	// Cobblemon JAR
-	modImplementation(files("libs/Cobblemon-fabric-1.7.3+1.21.1.jar"))
+	modImplementation(files("libs/Cobblemon-fabric-1.8.4+1.21.1.jar"))
+
+	val graalVersion = providers.gradleProperty("graal_version").get()
+	modRuntimeOnly("org.graalvm.js:js:$graalVersion")
+	modRuntimeOnly("org.graalvm.sdk:graal-sdk:$graalVersion")
+	modRuntimeOnly("org.graalvm.regex:regex:$graalVersion")
+	modRuntimeOnly("org.graalvm.truffle:truffle-api:$graalVersion")
+	minecraftServerLibraries("com.ibm.icu:icu4j:${providers.gradleProperty("icu4j_version").get()}")
 
 	// catchrate-display-fabric JAR
-	modCompileOnly(files("libs/catchrate-display-fabric-2.8.23.jar"))
+	modCompileOnly(files("libs/catchrate-display-fabric-2.12.3.jar"))
 }
 
 tasks.processResources {
@@ -73,8 +80,15 @@ kotlin {
 
 java {
 	withSourcesJar()
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+tasks.withType<net.fabricmc.loom.task.AbstractRunTask>().configureEach {
+	javaLauncher = javaToolchains.launcherFor {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
 }
 
 tasks.jar {

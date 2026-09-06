@@ -7,31 +7,31 @@
   ],
   "key": {
     "w": {
-      "tag": "#c:foods"
+      "tag": "c:foods"
     },
     "t": {
       "tag": "caraca_customs:tier_x_poke_ball_materials"
     },
     "i": {
-      "tag": "#c:foods"
+      "tag": "c:foods"
     },
     "l": {
-      "item": "#c:foods"
+      "tag": "c:foods"
     },
     "c": {
       "item": "minecraft:milk_bucket"
     },
     "r": {
-      "item": "#c:foods"
+      "tag": "c:foods"
     },
     "z": {
-      "item": "#c:foods"
+      "tag": "c:foods"
     },
     "b": {
       "item": "cobblemon:tumblestone"
     },
     "m": {
-      "item": "#c:foods"
+      "tag": "c:foods"
     }
   },
   "result": {

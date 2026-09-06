@@ -7,13 +7,13 @@
   ],
   "key": {
     "w": {
-      "tag": "minecraft:bread"
+      "item": "minecraft:bread"
     },
     "t": {
       "tag": "caraca_customs:tier_x_poke_ball_materials"
     },
     "i": {
-      "tag": "minecraft:bread"
+      "item": "minecraft:bread"
     },
     "l": {
       "item": "minecraft:bread"

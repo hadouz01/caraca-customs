@@ -1,41 +1,27 @@
 package com.caraca.customs.mulch
 
-import com.cobblemon.mod.common.api.mulch.MulchVariant
-
 /**
- * Interface contract defining custom mulch harvest tracking capabilities
- * injected into target Cobblemon block entities.
+ * Interface contract injected into Cobblemon's `BerryBlockEntity`, limiting any applied mulch
+ * to [MULCH_HARVEST_USES] yield cycles.
+ *
+ * The active mulch itself is read from Cobblemon's native `BerryBlockEntity.mulchVariant`.
  *
  * @author hadouz01
  * @since 1.0.0
  */
 interface MulchTracker {
-    /**
-     * Retrieves the active [MulchVariant] applied to the block entity.
-     *
-     * @return Current active mulch variant, or [MulchVariant.NONE].
-     */
-    val mulch: MulchVariant?
 
     /**
-     * Retrieves the remaining harvest uses allowed by current mulch application.
+     * Consumes one yield cycle from the active mulch, removing it once all cycles are used.
      *
-     * @return Remaining harvest count.
-     */
-    fun `caraca$getMulchHarvests`(): Int
-
-    /**
-     * Updates the active harvest usages counter for applied mulch.
-     *
-     * @param uses Target remaining uses count.
-     */
-    fun `caraca$setMulchHarvests`(uses: Int)
-
-    /**
-     * Consumes one harvest usage unit for the active mulch layer.
-     * Clears mulch state when usages exhaust.
-     *
-     * @return True if mulch was fully consumed and removed, false otherwise.
+     * @return `true` if the mulch was fully consumed and removed, `false` otherwise.
      */
     fun `caraca$consumeMulchHarvest`(): Boolean
+
+    companion object {
+        /**
+         * Number of yield cycles a single mulch application lasts.
+         */
+        const val MULCH_HARVEST_USES: Int = 4
+    }
 }

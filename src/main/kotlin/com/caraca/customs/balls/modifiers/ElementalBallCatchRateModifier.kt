@@ -10,9 +10,11 @@ import com.cobblemon.mod.common.pokemon.status.PersistentStatus
 import net.minecraft.world.entity.LivingEntity
 
 /**
- * High-performance catch rate modifier for Poké Balls operating on target elemental type alignments.
+ * Catch rate modifier for Poké Balls operating on target elemental type alignments.
  *
- * Dynamically resolves multipliers from [DynamicConfig] at runtime to ensure real-time config changes.
+ * Uses the boosted multiplier when the target shares one of [types] or suffers a status tied to them
+ * (Burn for Fire, Paralysis for Electric, Poison for Poison, Freeze for Ice), doubling it while asleep.
+ * Multipliers are resolved from [DynamicConfig] on every call so configuration changes apply immediately.
  *
  * @property ballNameId Identifier path of the host Poké Ball.
  * @property types Set of target [ElementalType] instances governing boosted multiplier calculations.
@@ -25,40 +27,40 @@ class ElementalBallCatchRateModifier(
     val types: Set<ElementalType>
 ) : CatchRateModifier {
 
+    override fun value(thrower: LivingEntity, pokemon: Pokemon): Float =
+        resolveMultiplier(pokemon.types, pokemon.status?.status)
+
+    override fun behavior(thrower: LivingEntity, pokemon: Pokemon): CatchRateModifier.Behavior =
+        CatchRateModifier.Behavior.MULTIPLY
+
+    override fun isValid(thrower: LivingEntity, pokemon: Pokemon): Boolean = true
+
+    override fun modifyCatchRate(currentCatchRate: Float, thrower: LivingEntity, pokemon: Pokemon): Float =
+        behavior(thrower, pokemon).mutator.invoke(currentCatchRate, value(thrower, pokemon))
+
     /**
-     * Evaluates the effective catch multiplier by querying current dynamic configuration.
+     * Checks whether the boosted multiplier applies to a target.
      *
-     * @param livingEntity The throwing entity attempting the capture.
-     * @param pokemon The target [Pokemon] instance being evaluated.
-     * @return Dynamic multiplier based on target status, elemental alignments, and real-time settings.
+     * @param targetTypes Elemental types of the target Pokémon.
+     * @param status Active persistent status of the target, if any.
+     * @return `true` if a type or a type-bound status matches.
      */
-    override fun value(livingEntity: LivingEntity, pokemon: Pokemon): Float {
+    fun isConditionMet(targetTypes: Iterable<ElementalType>, status: PersistentStatus?): Boolean =
+        targetTypes.any { it in types } || verifyStatus(status)
+
+    /**
+     * Resolves the multiplier for a target using the live configuration.
+     *
+     * @param targetTypes Elemental types of the target Pokémon.
+     * @param status Active persistent status of the target, if any.
+     * @return The default multiplier, or the boosted one (doubled while asleep) when [isConditionMet].
+     */
+    fun resolveMultiplier(targetTypes: Iterable<ElementalType>, status: PersistentStatus?): Float {
         val config = DynamicConfig.getPokeBallConfigFor(ballNameId)
-        val defaultMultiplier = config.defaultCaptureRate
-        val boostedMultiplier = config.boostedCaptureRate
-
-        val matchesType = types.contains(pokemon.primaryType) ||
-                (pokemon.secondaryType != null && types.contains(pokemon.secondaryType))
-
-        val activeStatus = pokemon.status?.status
-        val matchesStatus = verifyStatus(activeStatus)
-
-        if (!matchesType && !matchesStatus) {
-            return defaultMultiplier
+        if (!isConditionMet(targetTypes, status)) {
+            return config.defaultCaptureRate
         }
-
-        val isSleeping = activeStatus == Statuses.SLEEP
-        return if (isSleeping) boostedMultiplier * 2.0f else boostedMultiplier
-    }
-
-    override fun behavior(livingEntity: LivingEntity, pokemon: Pokemon): CatchRateModifier.Behavior {
-        return CatchRateModifier.Behavior.MULTIPLY
-    }
-
-    override fun isValid(livingEntity: LivingEntity, pokemon: Pokemon): Boolean = true
-
-    override fun modifyCatchRate(currentRate: Float, livingEntity: LivingEntity, pokemon: Pokemon): Float {
-        return behavior(livingEntity, pokemon).mutator.invoke(currentRate, value(livingEntity, pokemon))
+        return if (status == Statuses.SLEEP) config.boostedCaptureRate * 2.0f else config.boostedCaptureRate
     }
 
     /**
@@ -70,11 +72,9 @@ class ElementalBallCatchRateModifier(
     fun verifyStatus(pokemonStatus: PersistentStatus?): Boolean {
         if (pokemonStatus == null) return false
 
-        if (types.contains(ElementalTypes.FIRE) && pokemonStatus == Statuses.BURN) return true
-        if (types.contains(ElementalTypes.ELECTRIC) && pokemonStatus == Statuses.PARALYSIS) return true
-        if (types.contains(ElementalTypes.POISON) && (pokemonStatus == Statuses.POISON || pokemonStatus == Statuses.POISON_BADLY)) return true
-        if (types.contains(ElementalTypes.ICE) && pokemonStatus == Statuses.FROZEN) return true
-
-        return false
+        return (ElementalTypes.FIRE in types && pokemonStatus == Statuses.BURN) ||
+                (ElementalTypes.ELECTRIC in types && pokemonStatus == Statuses.PARALYSIS) ||
+                (ElementalTypes.POISON in types && (pokemonStatus == Statuses.POISON || pokemonStatus == Statuses.POISON_BADLY)) ||
+                (ElementalTypes.ICE in types && pokemonStatus == Statuses.FROZEN)
     }
 }

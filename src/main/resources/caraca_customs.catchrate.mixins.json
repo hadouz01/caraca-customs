@@ -1,0 +1,12 @@
+{
+	"required": false,
+	"package": "com.caraca.customs.mixin.compat",
+	"plugin": "com.caraca.customs.mixin.plugin.CatchRateDisplayMixinPlugin",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"BallMultiplierCalculatorMixin"
+	],
+	"injectors": {
+		"defaultRequire": 0
+	}
+}

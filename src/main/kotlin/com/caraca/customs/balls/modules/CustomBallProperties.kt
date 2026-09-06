@@ -6,14 +6,12 @@ import com.cobblemon.mod.common.api.types.ElementalType
 /**
  * Data container representing configuration parameters required to instantiate a [ModularPokeBall].
  *
- * Acts as a clean configuration contract for custom Poké Balls, specifying identifier names,
- * targeted elemental affiliations, catch rate multipliers, 3D model references, and optional capture effects.
+ * Catch rate multipliers are not stored here: they are always read live from
+ * [com.caraca.customs.config.DynamicConfig] using [nameId] and [tier].
  *
  * @property nameId The snake_case string identifier for the Poké Ball (e.g., "fire_ball", "caraca_ball").
+ * @property tier The [BallTier] driving default catch rates and loot table placement.
  * @property elementalTypes The set of [ElementalType] targeted by this Poké Ball's catch logic (defaults to empty set).
- * @property reducedCatchRate The lowered base catch rate multiplier applied during standard calculation (defaults to 1.0f).
- * @property defaultCatchRate The default base catch rate multiplier applied during standard calculation (defaults to 1.0f).
- * @property boostedCatchRate The boosted catch rate multiplier applied when specific type/status criteria are met (defaults to 1.0f).
  * @property model3dPath The relative path name pointing to the 3D model JSON file (defaults to [nameId]).
  * @property extraCaptureEffects List of optional [CaptureEffect] handlers executed upon successful Pokémon capture.
  *
@@ -21,11 +19,21 @@ import com.cobblemon.mod.common.api.types.ElementalType
  * @since 1.0.0
  */
 data class CustomBallProperties(
-    val nameId: String = "null_value",
+    val nameId: String,
+    val tier: BallTier,
     val elementalTypes: Set<ElementalType> = emptySet(),
-    val reducedCatchRate: Float = 1.0f,
-    val defaultCatchRate: Float = 1.0f,
-    val boostedCatchRate: Float = 1.0f,
     val model3dPath: String = nameId,
     val extraCaptureEffects: List<CaptureEffect> = emptyList()
 )
+
+/**
+ * Category of a custom Poké Ball, selecting its default catch rate configuration and loot pool.
+ *
+ * @author hadouz01
+ * @since 1.0.0
+ */
+enum class BallTier {
+    REGULAR,
+    ULTRA,
+    CARACA
+}

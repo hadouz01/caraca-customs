@@ -19,20 +19,28 @@
 			}
 		],
 		"client": [
-			"com.caraca.customs.client.CustomBallTooltipHandler"
+			{
+				"adapter": "kotlin",
+				"value": "com.caraca.CaracaCustomsClient"
+			}
 		],
 		"modmenu": [
 			"com.caraca.customs.client.gui.ModMenuIntegration"
 		]
 	},
 	"mixins": [
-		"caraca_customs.mixins.json"
+		"caraca_customs.mixins.json",
+		"caraca_customs.catchrate.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.19.3",
 		"minecraft": "~1.21.1",
 		"java": ">=21",
 		"fabric-api": "*",
-		"cobblemon": "*"
+		"fabric-language-kotlin": "*",
+		"cobblemon": ">=1.8.4"
+	},
+	"suggests": {
+		"catchrate-display": ">=2.12.3"
 	}
 }

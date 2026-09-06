@@ -1,15 +1,17 @@
 package com.caraca.customs.balls.modules
 
 import com.caraca.CaracaCustoms
-import com.caraca.customs.balls.modules.CustomBallProperties
+import net.fabricmc.loader.api.FabricLoader
 import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * High-performance runtime generator for item models and Cobblemon entity variations.
+ * Development-only generator for item models and Cobblemon Poké Ball variation files.
  *
- * Ensures files are written directly into both source tree and build resources directories
- * to prevent RecipeManager and Datapack loading failures during Fabric Loom development runs.
+ * Runs only inside a development environment, writing into the project's source tree and, when present,
+ * the build resources directory. The project root is resolved as the parent of the game directory (`run/`),
+ * so production game and server folders are never written to. Only missing files are created: existing,
+ * possibly hand-edited assets are left untouched.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -48,51 +50,56 @@ object ResourceGenerator {
   ]
 }"""
 
+    private val projectRoot: Path? by lazy {
+        val loader = FabricLoader.getInstance()
+        if (loader.isDevelopmentEnvironment) loader.gameDir.toAbsolutePath().parent else null
+    }
+
     /**
-     * Generates required JSON structure files and writes them to target output directories.
+     * Generates the item model and Poké Ball variation files for a custom ball in development environments.
      *
      * @param props Configuration properties defining Poké Ball names and references.
      */
     fun generate(props: CustomBallProperties) {
-        val ns = CaracaCustoms.MOD_ID
-        val name = props.nameId
-        val particleBallName = name.lowercase().replace("_", "")
+        val root = projectRoot ?: return
+        val particleBallName = props.nameId.lowercase().replace("_", "")
 
-        val devResourceDir = Path.of("src/main/resources/assets")
-        val buildResourceDir = Path.of("build/resources/main/assets")
+        writeAssetFiles(root.resolve("src/main/resources/assets"), props.nameId, particleBallName)
 
-        writeAssetFiles(devResourceDir, ns, name, particleBallName)
+        val buildResourceDir = root.resolve("build/resources/main/assets")
         if (Files.exists(buildResourceDir)) {
-            writeAssetFiles(buildResourceDir, ns, name, particleBallName)
+            writeAssetFiles(buildResourceDir, props.nameId, particleBallName)
         }
     }
 
-    /**
-     * Resolves subdirectories and writes item models and entity variation JSONs to target root path.
-     *
-     * @param baseAssetsDir Root assets directory path.
-     * @param ns Mod namespace string.
-     * @param name Target Poké Ball name identifier.
-     * @param particleName Formatted string used for particle path mappings.
-     */
-    private fun writeAssetFiles(baseAssetsDir: Path, ns: String, name: String, particleName: String) {
+    private fun writeAssetFiles(baseAssetsDir: Path, name: String, particleName: String) {
+        val ns = CaracaCustoms.MOD_ID
         val itemDir = baseAssetsDir.resolve("$ns/models/item")
-        val entityDirCobblemon = baseAssetsDir.resolve("cobblemon/bedrock/poke_balls/variations")
+        val variationsDir = baseAssetsDir.resolve("cobblemon/bedrock/poke_balls/variations")
 
         runCatching {
             Files.createDirectories(itemDir)
-            Files.createDirectories(entityDirCobblemon)
+            Files.createDirectories(variationsDir)
 
-            Files.writeString(itemDir.resolve("$name.json"), ITEM_JSON.format(ns, name))
-            Files.writeString(itemDir.resolve("${name}_model.json"), ITEM_MODEL_JSON.format(ns, name))
+            writeIfAbsent(itemDir.resolve("$name.json"), ITEM_JSON.format(ns, name))
+            writeIfAbsent(itemDir.resolve("${name}_model.json"), ITEM_MODEL_JSON.format(ns, name))
 
             val casualParticle = "cobblemon:$particleName/casual/ballsendsparkle"
             val battleParticle = "cobblemon:$particleName/battle/ballsparks"
 
-            Files.writeString(
-                entityDirCobblemon.resolve("0_${name}_base.json"),
+            writeIfAbsent(
+                variationsDir.resolve("0_${name}_base.json"),
                 ENTITY_JSON.format(ns, name, ns, name, casualParticle, battleParticle)
             )
+        }
+    }
+
+    /**
+     * Writes a template file only when it does not exist yet, so hand-edited assets are never overwritten.
+     */
+    private fun writeIfAbsent(path: Path, content: String) {
+        if (Files.notExists(path)) {
+            Files.writeString(path, content)
         }
     }
 }

@@ -10,12 +10,14 @@ import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents
 import net.minecraft.core.Registry
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceLocation
-import java.lang.reflect.Field
+import net.minecraft.world.item.Item
+import net.minecraft.world.item.ItemStack
 
 /**
  * Central registry manager handling lifecycle initialization and registration for custom Poké Balls.
  *
- * Handles integration between Vanilla Minecraft registries, Fabric API, and Cobblemon core systems.
+ * Cobblemon exposes no public Poké Ball registration API, so balls are inserted into the private
+ * `PokeBalls.defaults` map and linked to their item through the internal `PokeBall.item` field.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -23,86 +25,71 @@ import java.lang.reflect.Field
 object CustomBallRegistry {
 
     private val registeredBalls = mutableListOf<ModularPokeBall>()
-    private val ballMap = mutableMapOf<String, ModularPokeBall>()
+    private val ballsByName = mutableMapOf<String, ModularPokeBall>()
+    private val ballsByItem = mutableMapOf<Item, ModularPokeBall>()
 
     /**
-     * Gets an unmodifiable list of all registered modular Poké Balls.
+     * Gets all registered modular Poké Balls, in registration order.
      *
-     * @return Immutable list of custom Poké Balls.
+     * @return Read-only list of custom Poké Balls.
      */
     fun getRegisteredBalls(): List<ModularPokeBall> = registeredBalls
 
     /**
-     * Looks up a custom Poké Ball by its string identifier in O(1) time complexity.
+     * Looks up a custom Poké Ball by its path identifier.
      *
-     * @param nameId Lowercase item path string.
+     * @param nameId Item path string, case-insensitive.
      * @return Matching [ModularPokeBall] instance, or `null` if absent.
      */
-    fun getBallByName(nameId: String): ModularPokeBall? = ballMap[nameId.lowercase()]
+    fun getBallByName(nameId: String): ModularPokeBall? = ballsByName[nameId.lowercase()]
+
+    /**
+     * Looks up a custom Poké Ball by its item.
+     *
+     * @param item Target item.
+     * @return Matching [ModularPokeBall] instance, or `null` if the item is not a custom Poké Ball.
+     */
+    fun getBallByItem(item: Item): ModularPokeBall? = ballsByItem[item]
 
     /**
      * Initializes all declared custom Poké Balls, registers item entries, and hooks into creative tabs.
      */
     fun initialize() {
-        val defaultsField = PokeBalls::class.java.getDeclaredField("defaults").apply { isAccessible = true }
-
         @Suppress("UNCHECKED_CAST")
-        val defaults = defaultsField.get(PokeBalls) as MutableMap<ResourceLocation, PokeBall>
+        val defaults = PokeBalls::class.java.getDeclaredField("defaults")
+            .apply { isAccessible = true }
+            .get(PokeBalls) as MutableMap<ResourceLocation, PokeBall>
         val itemField = PokeBall::class.java.getDeclaredField("item").apply { isAccessible = true }
 
         CustomBalls.ALL.forEach { properties ->
             val modularBall = ModularPokeBall(properties)
-            processRegistration(modularBall, defaults, itemField)
+
+            defaults[modularBall.id] = modularBall.pokeBall
+            itemField.set(modularBall.pokeBall, modularBall.item)
+            Registry.register(BuiltInRegistries.ITEM, modularBall.id, modularBall.item)
+
+            registeredBalls += modularBall
+            ballsByName[modularBall.props.nameId.lowercase()] = modularBall
+            ballsByItem[modularBall.item] = modularBall
+
+            ResourceGenerator.generate(modularBall.props)
         }
 
         registerCreativeTabEntries()
     }
 
     /**
-     * Processes individual registration steps for a given custom Poké Ball.
-     *
-     * @param modularBall Target custom Poké Ball wrapper.
-     * @param defaults Reflective reference to Cobblemon defaults map.
-     * @param itemField Reflective reference to private item field in [PokeBall].
-     */
-    private fun processRegistration(
-        modularBall: ModularPokeBall,
-        defaults: MutableMap<ResourceLocation, PokeBall>,
-        itemField: Field
-    ) {
-        val ballName = modularBall.props.nameId.lowercase()
-
-        // Register custom ball into Cobblemon's internal maps
-        defaults[modularBall.id] = modularBall.pokeBall
-        itemField.set(modularBall.pokeBall, modularBall.item)
-
-        // Register into Vanilla Minecraft item registry
-        Registry.register(BuiltInRegistries.ITEM, modularBall.id, modularBall.item)
-
-        registeredBalls.add(modularBall)
-        ballMap[ballName] = modularBall
-
-        ResourceGenerator.generate(modularBall.props)
-    }
-
-    /**
-     * Configures creative tab modifications for Cobblemon items in a single batch listener.
-     *
-     * Filters out overridden native Cobblemon items and prepends custom Poké Balls to the
-     * beginning of the creative tab to maintain high execution performance.
+     * Hides the Cobblemon balls replaced by custom ones and prepends the custom balls to Cobblemon's utility tab.
      */
     private fun registerCreativeTabEntries() {
         ItemGroupEvents.modifyEntriesEvent(CobblemonItemGroups.UTILITY_ITEMS_KEY).register { entries ->
-            val registeredNames = ballMap.keys
+            val isReplacedCobblemonBall = { stack: ItemStack ->
+                val key = BuiltInRegistries.ITEM.getKey(stack.item)
+                key.namespace == "cobblemon" && ballsByName.containsKey(key.path)
+            }
 
-            entries.displayStacks.removeIf { stack ->
-                val key = BuiltInRegistries.ITEM.getKey(stack.item)
-                key.namespace == "cobblemon" && registeredNames.contains(key.path)
-            }
-            entries.searchTabStacks.removeIf { stack ->
-                val key = BuiltInRegistries.ITEM.getKey(stack.item)
-                key.namespace == "cobblemon" && registeredNames.contains(key.path)
-            }
+            entries.displayStacks.removeIf(isReplacedCobblemonBall)
+            entries.searchTabStacks.removeIf(isReplacedCobblemonBall)
 
             registeredBalls.asReversed().forEach { modularBall ->
                 entries.prepend(modularBall.item)

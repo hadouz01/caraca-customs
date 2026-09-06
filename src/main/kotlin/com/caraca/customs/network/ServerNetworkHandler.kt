@@ -4,10 +4,12 @@ import com.caraca.customs.config.DynamicConfig
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
+import net.minecraft.server.MinecraftServer
+import net.minecraft.server.level.ServerPlayer
 
 /**
  * Server-side network manager responsible for registering packet types
- * and dispatching configuration payloads to players upon joining.
+ * and dispatching configuration payloads to players.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -15,19 +17,33 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 object ServerNetworkHandler {
 
     /**
-     * Initializes server networking hooks.
-     * Registers the S2C (Server-To-Client) payload type and binds the join event listener.
+     * Registers the S2C payload type and sends the active configuration to every joining player.
      */
     fun register() {
-        // Registers the payload type and codec with Fabric's Play S2C registry
         PayloadTypeRegistry.playS2C().register(ConfigSyncPayload.TYPE, ConfigSyncPayload.CODEC)
 
-        // Dispatches the current server configuration state to the client when they connect
         ServerPlayConnectionEvents.JOIN.register { handler, _, _ ->
-            val jsonString = DynamicConfig.serializeToString()
-            val payload = ConfigSyncPayload(jsonString)
-
-            ServerPlayNetworking.send(handler.player, payload)
+            sendConfig(handler.player)
         }
     }
+
+    /**
+     * Sends the active configuration to every connected player, used after a hot reload.
+     *
+     * @param server The running server instance.
+     */
+    fun broadcastConfig(server: MinecraftServer) {
+        val payload = createPayload()
+        server.playerList.players
+            .filter { ServerPlayNetworking.canSend(it, ConfigSyncPayload.TYPE) }
+            .forEach { ServerPlayNetworking.send(it, payload) }
+    }
+
+    private fun sendConfig(player: ServerPlayer) {
+        if (ServerPlayNetworking.canSend(player, ConfigSyncPayload.TYPE)) {
+            ServerPlayNetworking.send(player, createPayload())
+        }
+    }
+
+    private fun createPayload(): ConfigSyncPayload = ConfigSyncPayload(DynamicConfig.serializeToString())
 }

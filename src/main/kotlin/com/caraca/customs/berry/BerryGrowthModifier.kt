@@ -10,8 +10,11 @@ import java.lang.reflect.Field
 /**
  * Reflection utility updating registered [Berry] growth parameters at startup and runtime.
  *
- * Directs runtime modifications to private growth fields within Cobblemon's internal berry registry
- * to ensure dynamic growth bounds take effect cleanly across world reloads.
+ * Writes the configured growth range (in minutes, the unit Cobblemon expects) into each berry's
+ * `growthTime`, keeping Cobblemon's own timers and the data synced to clients consistent with the
+ * configuration. Stage durations themselves are calculated by `BerryBlockEntityGrowthMixin`.
+ *
+ * Berries are datapack-driven, so the values are re-applied after every server start and datapack reload.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -20,69 +23,34 @@ object BerryGrowthModifier {
 
     private val LOGGER = LoggerFactory.getLogger("caraca_customs/BerryGrowthModifier")
 
-    /**
-     * Conversion factor mapping standard time minutes to Minecraft engine game ticks.
-     */
-    private const val TICKS_PER_MINUTE = 1200
-
-    /**
-     * Ticks offset subtracted from the calculated lower bound duration.
-     */
-    private const val LOWER_BOUND_OFFSET = 1000
-
-    /**
-     * Reflective reference to private `growthTime` field in Cobblemon's [Berry] class.
-     */
     private val growthTimeField: Field by lazy {
         Berry::class.java.getDeclaredField("growthTime").apply { isAccessible = true }
     }
 
     /**
-     * Registers server lifecycle listeners to ensure berry parameters persist across world loads.
+     * Registers server lifecycle listeners re-applying berry parameters whenever berries are (re)loaded.
      */
     fun register() {
-        ServerLifecycleEvents.SERVER_STARTED.register {
-            applyGrowthConfigurations()
+        ServerLifecycleEvents.SERVER_STARTED.register { applyGrowthConfigurations() }
+        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register { _, _, success ->
+            if (success) applyGrowthConfigurations()
         }
-        applyGrowthConfigurations()
     }
 
     /**
-     * Iterates through all registered berries in [Berries] and updates their internal growth range.
-     *
-     * Range bounds in ticks:
-     * - If `minGrowthTime == maxGrowthTime`: Upper bound is halved (`(time * 1200) / 2`).
-     * - Lower bound: `upperBound - 1000` (Coerced to at least 1 tick).
+     * Updates the growth range of every registered berry using its resolved configuration.
      */
     fun applyGrowthConfigurations() {
         Berries.all().forEach { berry ->
-            val berryId = berry.identifier.toString()
-            val config = DynamicConfig.getConfigFor(berryId)
+            val config = DynamicConfig.getConfigFor(berry.identifier.toString())
+            val minMinutes = config.minGrowthTime.coerceAtLeast(1)
+            val maxMinutes = config.maxGrowthTime.coerceAtLeast(minMinutes)
 
-            val safeMinGrowthMinutes = config.minGrowthTime.coerceAtLeast(1)
-            val safeMaxGrowthMinutes = config.maxGrowthTime.coerceAtLeast(safeMinGrowthMinutes)
-
-            var maxTicks = safeMaxGrowthMinutes * TICKS_PER_MINUTE
-
-            if (safeMinGrowthMinutes == safeMaxGrowthMinutes) {
-                maxTicks /= 2
-            }
-
-            val minTicks = ((safeMinGrowthMinutes * TICKS_PER_MINUTE) - LOWER_BOUND_OFFSET).coerceAtLeast(1)
-
-            updateGrowthTime(berry, minTicks..maxTicks)
+            updateGrowthTime(berry, minMinutes..maxMinutes)
         }
     }
 
-    /**
-     * Reflectively modifies the private [Berry.growthTime] property on a target instance.
-     *
-     * @param berry Target [Berry] instance.
-     * @param newRange Validated non-empty [IntRange] in ticks representing randomized growth duration bounds.
-     */
     private fun updateGrowthTime(berry: Berry, newRange: IntRange) {
-        if (newRange.isEmpty()) return
-
         runCatching {
             growthTimeField.set(berry, newRange)
         }.onFailure { exception ->

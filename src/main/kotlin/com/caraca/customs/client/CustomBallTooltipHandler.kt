@@ -5,7 +5,6 @@ import com.caraca.customs.balls.CustomBallRegistry
 import com.caraca.customs.config.DynamicConfig
 import com.cobblemon.mod.common.api.types.ElementalType
 import com.cobblemon.mod.common.api.types.ElementalTypes
-import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback
 import net.minecraft.ChatFormatting
 import net.minecraft.client.resources.language.I18n
@@ -23,19 +22,12 @@ import net.minecraft.world.item.ItemStack
  * @author hadouz01
  * @since 1.0.0
  */
-class CustomBallTooltipHandler : ClientModInitializer {
-
-    /**
-     * Entrypoint callback initializing client listeners.
-     */
-    override fun onInitializeClient() {
-        registerTooltipCallback()
-    }
+object CustomBallTooltipHandler {
 
     /**
      * Hooks into Fabric's [ItemTooltipCallback] pipeline.
      */
-    private fun registerTooltipCallback() {
+    fun register() {
         ItemTooltipCallback.EVENT.register { stack, _, _, lines ->
             appendBallTooltip(stack, lines)
         }
@@ -48,8 +40,7 @@ class CustomBallTooltipHandler : ClientModInitializer {
      * @param lines Mutable list of tooltip components attached to the item.
      */
     private fun appendBallTooltip(stack: ItemStack, lines: MutableList<Component>) {
-        val registeredBalls = CustomBallRegistry.getRegisteredBalls()
-        val matchingBall = registeredBalls.firstOrNull { it.item == stack.item } ?: return
+        val matchingBall = CustomBallRegistry.getBallByItem(stack.item) ?: return
 
         val ballId = matchingBall.props.nameId
         val config = DynamicConfig.getPokeBallConfigFor(ballId)

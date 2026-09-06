@@ -6,6 +6,7 @@ import com.caraca.customs.berry.BerryHarvestHandler
 import com.caraca.customs.command.CaracaCommand
 import com.caraca.customs.config.DynamicConfig
 import com.caraca.customs.loot.CustomLootInjector
+import com.caraca.customs.network.ServerNetworkHandler
 import com.caraca.customs.util.BuiltinPackRegistry
 import net.fabricmc.api.ModInitializer
 import net.minecraft.resources.ResourceLocation
@@ -16,6 +17,9 @@ import org.slf4j.LoggerFactory
  *
  * Implements [ModInitializer] to hook into Fabric's lifecycle initialization phase,
  * triggering registration of custom Poké Balls and Berry mechanics.
+ *
+ * Custom Poké Balls are registered before [DynamicConfig.load] so the configuration file
+ * can be populated with an override entry for every registered ball.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -33,13 +37,14 @@ object CaracaCustoms : ModInitializer {
 	 * Called by Fabric Loader during mod initialization.
 	 */
 	override fun onInitialize() {
+		CustomBallRegistry.initialize()
 		DynamicConfig.load()
+
+		ServerNetworkHandler.register()
 		BerryGrowthModifier.register()
 		BerryHarvestHandler.register()
 		BuiltinPackRegistry.register()
 		CustomLootInjector.register()
-		CustomBallRegistry.initialize()
-
 		CaracaCommand.register()
 
 		LOGGER.info("Custom PokéBalls and Berry System initialized successfully!")

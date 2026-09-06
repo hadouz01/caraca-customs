@@ -6,9 +6,8 @@ import com.cobblemon.mod.common.pokemon.Pokemon
 import net.minecraft.world.entity.LivingEntity
 
 /**
- * Dynamic catch rate modifier reading base rate directly from memory configuration at runtime.
- *
- * Ensures real-time configuration changes via Cloth Config GUI apply immediately without restart.
+ * Catch rate modifier for Poké Balls without elemental affinities, reading the default
+ * multiplier from [DynamicConfig] on every call so configuration changes apply immediately.
  *
  * @property ballNameId Identifier path of the host Poké Ball.
  *
@@ -19,24 +18,20 @@ class DynamicCatchRateModifier(
     val ballNameId: String
 ) : CatchRateModifier {
 
+    override fun value(thrower: LivingEntity, pokemon: Pokemon): Float = resolveMultiplier()
+
+    override fun behavior(thrower: LivingEntity, pokemon: Pokemon): CatchRateModifier.Behavior =
+        CatchRateModifier.Behavior.MULTIPLY
+
+    override fun isValid(thrower: LivingEntity, pokemon: Pokemon): Boolean = true
+
+    override fun modifyCatchRate(currentCatchRate: Float, thrower: LivingEntity, pokemon: Pokemon): Float =
+        behavior(thrower, pokemon).mutator.invoke(currentCatchRate, value(thrower, pokemon))
+
     /**
-     * Evaluates effective multiplier reading directly from dynamic config memory state.
+     * Resolves the configured default multiplier for this ball.
      *
-     * @param livingEntity Target throwing entity.
-     * @param pokemon Target wild Pokémon entity.
      * @return Current configured base capture multiplier.
      */
-    override fun value(livingEntity: LivingEntity, pokemon: Pokemon): Float {
-        return DynamicConfig.getPokeBallConfigFor(ballNameId).defaultCaptureRate
-    }
-
-    override fun behavior(livingEntity: LivingEntity, pokemon: Pokemon): CatchRateModifier.Behavior {
-        return CatchRateModifier.Behavior.MULTIPLY
-    }
-
-    override fun isValid(livingEntity: LivingEntity, pokemon: Pokemon): Boolean = true
-
-    override fun modifyCatchRate(currentRate: Float, livingEntity: LivingEntity, pokemon: Pokemon): Float {
-        return behavior(livingEntity, pokemon).mutator.invoke(currentRate, value(livingEntity, pokemon))
-    }
+    fun resolveMultiplier(): Float = DynamicConfig.getPokeBallConfigFor(ballNameId).defaultCaptureRate
 }
