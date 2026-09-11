@@ -6,12 +6,14 @@ import com.caraca.customs.config.BerryConfigEntry
 import com.caraca.customs.config.ConfigData
 import com.caraca.customs.config.DynamicConfig
 import com.caraca.customs.config.PokeBallConfigEntry
+import com.caraca.customs.progression.LevelCapHandler
 import com.terraformersmc.modmenu.api.ConfigScreenFactory
 import com.terraformersmc.modmenu.api.ModMenuApi
 import me.shedaniel.clothconfig2.api.ConfigBuilder
 import me.shedaniel.clothconfig2.api.ConfigCategory
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder
 import me.shedaniel.clothconfig2.impl.builders.SubCategoryBuilder
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
@@ -52,6 +54,7 @@ class ModMenuIntegration : ModMenuApi {
             val entryBuilder = builder.entryBuilder()
 
             appendGeneralSettings(builder.getOrCreateCategory(Component.translatable("category.caraca_customs.general")), entryBuilder)
+            appendProgressionSettings(builder.getOrCreateCategory(Component.translatable("category.caraca_customs.progression")), entryBuilder)
             appendBerryOverrideSettings(builder.getOrCreateCategory(Component.translatable("category.caraca_customs.berries")), entryBuilder)
             appendBallOverrideSettings(builder.getOrCreateCategory(Component.translatable("category.caraca_customs.overrides")), entryBuilder)
             appendDebugSettings(builder.getOrCreateCategory(Component.translatable("category.caraca_customs.debugs")), entryBuilder)
@@ -59,6 +62,7 @@ class ModMenuIntegration : ModMenuApi {
             builder.setSavingRunnable {
                 DynamicConfig.save()
                 BerryGrowthModifier.applyGrowthConfigurations()
+                Minecraft.getInstance().singleplayerServer?.let { server -> server.execute { LevelCapHandler.refreshTiers(server) } }
             }
 
             return builder.build()
@@ -91,6 +95,50 @@ class ModMenuIntegration : ModMenuApi {
             appendPokeBallCategoryDrawer(category, entryBuilder, "regular_ball_title", "regular_default", data.defaultRegularPokeBallConfig, DEFAULTS.defaultRegularPokeBallConfig)
             appendPokeBallCategoryDrawer(category, entryBuilder, "ultra_ball_title", "ultra_default", data.defaultUltraPokeBallConfig, DEFAULTS.defaultUltraPokeBallConfig)
             appendPokeBallCategoryDrawer(category, entryBuilder, "caraca_ball_title", "caraca_default", data.defaultCaracaBallConfig, DEFAULTS.defaultCaracaBallConfig)
+        }
+
+        /**
+         * Appends the level cap toggle, the tier count and the max capture count to the Progression tab.
+         */
+        private fun appendProgressionSettings(category: ConfigCategory, entryBuilder: ConfigEntryBuilder) {
+            val data = DynamicConfig.data
+
+            category.addEntry(
+                entryBuilder.startBooleanToggle(
+                    Component.translatable("option.caraca_customs.level_cap_enabled"),
+                    data.levelCapEnabled
+                )
+                    .setDefaultValue(DEFAULTS.levelCapEnabled)
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.level_cap_enabled"))
+                    .setSaveConsumer { data.levelCapEnabled = it }
+                    .build()
+            )
+
+            category.addEntry(
+                entryBuilder.startIntSlider(
+                    Component.translatable("option.caraca_customs.tier_count"),
+                    data.tierCount,
+                    DynamicConfig.MIN_TIER_COUNT,
+                    DynamicConfig.MAX_TIER_COUNT
+                )
+                    .setDefaultValue(DEFAULTS.tierCount)
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.tier_count"))
+                    .setSaveConsumer { data.tierCount = it }
+                    .build()
+            )
+
+            category.addEntry(
+                entryBuilder.startIntField(
+                    Component.translatable("option.caraca_customs.max_tier_capture_count"),
+                    data.maxTierCaptureCount
+                )
+                    .setDefaultValue(DEFAULTS.maxTierCaptureCount)
+                    .setMin(DynamicConfig.MIN_TIER_CAPTURE_COUNT)
+                    .setMax(DynamicConfig.MAX_TIER_CAPTURE_COUNT)
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.max_tier_capture_count"))
+                    .setSaveConsumer { data.maxTierCaptureCount = it }
+                    .build()
+            )
         }
 
         /**

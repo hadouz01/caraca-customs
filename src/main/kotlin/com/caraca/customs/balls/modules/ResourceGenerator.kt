@@ -88,7 +88,7 @@ object ResourceGenerator {
             val battleParticle = "cobblemon:$particleName/battle/ballsparks"
 
             writeIfAbsent(
-                variationsDir.resolve("0_${name}_base.json"),
+                variationsDir.resolve("0_${ns}_${name}_base.json"),
                 ENTITY_JSON.format(ns, name, ns, name, casualParticle, battleParticle)
             )
         }

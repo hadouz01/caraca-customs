@@ -200,5 +200,22 @@
   "tooltip.caraca_customs.berry.max_growth_time": "Min: 1 | Max: ???. Leave it as 0 if you want to use the global config 'Global Maximum Growth Time'",
 
   "text.caraca_customs.command.reload_success": "§a[Caraca Customs] Configurations and berry mechanics reloaded successfully!",
-  "text.caraca_customs.command.reload_failure": "§c[Caraca Customs] Failed to reload configurations: %s"
+  "text.caraca_customs.command.reload_failure": "§c[Caraca Customs] Failed to reload configurations: %s",
+
+  "category.caraca_customs.progression": "Progression",
+  "option.caraca_customs.level_cap_enabled": "Tier Level Caps",
+  "tooltip.caraca_customs.level_cap_enabled": "When enabled, your Pokémon can only level up to the cap of your current tier. Catch more species to unlock higher tiers.",
+  "option.caraca_customs.tier_count": "Tier Count",
+  "tooltip.caraca_customs.tier_count": "How many tiers the progression has (1 to 20). Max level is split evenly between them, and the last tier always reaches Cobblemon's max level. Ex: 6 tiers = caps of 16, 32, 48, 64, 80 and 100",
+  "option.caraca_customs.max_tier_capture_count": "Species Needed for the Last Tier",
+  "tooltip.caraca_customs.max_tier_capture_count": "Different species you need to catch to reach the last tier (50 to 1025). The other tiers are spread evenly up to it. Ex: 512 with 6 tiers = 0, 102, 204, 306, 408 and 512",
+
+  "text.caraca_customs.level_cap.reached": "%s reached your level cap (%s). Catch more species to raise it!",
+  "text.caraca_customs.tier.up": "You reached tier %s of %s! Your Pokémon can now level up to %s.",
+  "text.caraca_customs.tier.up_no_cap": "You reached tier %s of %s!",
+  "text.caraca_customs.command.tier.header": "%s is on tier %s of %s, with %s species caught.",
+  "text.caraca_customs.command.tier.level_cap": "Level cap: %s",
+  "text.caraca_customs.command.tier.next": "Next tier at %s species, raising the level cap to %s.",
+  "text.caraca_customs.command.tier.next_no_cap": "Next tier at %s species.",
+  "text.caraca_customs.command.tier.max": "This is the last tier!"
 }

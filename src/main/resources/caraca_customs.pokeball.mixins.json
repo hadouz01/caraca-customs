@@ -1,0 +1,12 @@
+{
+	"required": true,
+	"package": "com.caraca.customs.mixin.pokeball",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"PokemonPropertiesPokeBallMixin",
+		"PropertiesCompletionProviderMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

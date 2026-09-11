@@ -7,6 +7,7 @@ import com.caraca.customs.command.CaracaCommand
 import com.caraca.customs.config.DynamicConfig
 import com.caraca.customs.loot.CustomLootInjector
 import com.caraca.customs.network.ServerNetworkHandler
+import com.caraca.customs.progression.LevelCapHandler
 import com.caraca.customs.util.BuiltinPackRegistry
 import net.fabricmc.api.ModInitializer
 import net.minecraft.resources.ResourceLocation
@@ -45,9 +46,10 @@ object CaracaCustoms : ModInitializer {
 		BerryHarvestHandler.register()
 		BuiltinPackRegistry.register()
 		CustomLootInjector.register()
+		LevelCapHandler.register()
 		CaracaCommand.register()
 
-		LOGGER.info("Custom PokéBalls and Berry System initialized successfully!")
+		LOGGER.info("Custom PokéBalls, Berry System and player tiers initialized successfully!")
 	}
 
 	/**

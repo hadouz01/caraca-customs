@@ -206,5 +206,22 @@
   "tooltip.caraca_customs.berry.max_growth_time": "Mín: 1 | Máx: 6. Deixe como 0 se quiser usar o valor da configuração global global 'Tempo Máx. de Crescimento Global'",
 
   "text.caraca_customs.command.reload_success": "§a[Caraca Customs] Configurações e mecânicas de berries recarregadas com sucesso!",
-  "text.caraca_customs.command.reload_failure": "§c[Caraca Customs] Falha ao recarregar as configurações: %s"
+  "text.caraca_customs.command.reload_failure": "§c[Caraca Customs] Falha ao recarregar as configurações: %s",
+
+  "category.caraca_customs.progression": "Progressão",
+  "option.caraca_customs.level_cap_enabled": "Limite de Nível por Tier",
+  "tooltip.caraca_customs.level_cap_enabled": "Quando ativado, seus Pokémon só sobem de nível até o limite do seu tier atual. Capture mais espécies para liberar tiers maiores.",
+  "option.caraca_customs.tier_count": "Quantidade de Tiers",
+  "tooltip.caraca_customs.tier_count": "Quantos tiers a progressão tem (1 a 20). O nível máximo é dividido igualmente entre eles, e o último tier sempre chega ao nível máximo do Cobblemon. Ex: 6 tiers = limites de 16, 32, 48, 64, 80 e 100",
+  "option.caraca_customs.max_tier_capture_count": "Espécies Necessárias para o Último Tier",
+  "tooltip.caraca_customs.max_tier_capture_count": "Quantas espécies diferentes você precisa capturar para chegar ao último tier (50 a 1025). Os outros tiers são distribuídos igualmente até ele. Ex: 512 com 6 tiers = 0, 102, 204, 306, 408 e 512",
+
+  "text.caraca_customs.level_cap.reached": "%s chegou no seu limite de nível (%s). Capture mais espécies para aumentá-lo!",
+  "text.caraca_customs.tier.up": "Você chegou no tier %s de %s! Seus Pokémon agora podem subir até o nível %s.",
+  "text.caraca_customs.tier.up_no_cap": "Você chegou no tier %s de %s!",
+  "text.caraca_customs.command.tier.header": "%s está no tier %s de %s, com %s espécies capturadas.",
+  "text.caraca_customs.command.tier.level_cap": "Limite de nível: %s",
+  "text.caraca_customs.command.tier.next": "Próximo tier com %s espécies, aumentando o limite de nível para %s.",
+  "text.caraca_customs.command.tier.next_no_cap": "Próximo tier com %s espécies.",
+  "text.caraca_customs.command.tier.max": "Este é o último tier!"
 }

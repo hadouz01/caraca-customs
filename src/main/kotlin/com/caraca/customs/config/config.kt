@@ -55,6 +55,9 @@ data class PokeBallConfigEntry(
  * @property defaultUltraPokeBallConfig Default capture rate config for ultra custom Poké Balls.
  * @property defaultCaracaBallConfig Default capture rate config for Caraca Poké Balls.
  * @property pokeBallOverrides Map of specific custom Poké Ball path identifiers to custom capture rate configurations.
+ * @property levelCapEnabled Toggles the tier level caps on player-owned Pokémon.
+ * @property tierCount Amount of progression tiers, from 1 to 20.
+ * @property maxTierCaptureCount Caught species needed to reach the last tier, from 50 to 1025.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -81,7 +84,10 @@ data class ConfigData(
         defaultCaptureRate = 6.7f,
         boostedCaptureRate = 6.7f
     ),
-    val pokeBallOverrides: MutableMap<String, PokeBallConfigEntry> = linkedMapOf()
+    val pokeBallOverrides: MutableMap<String, PokeBallConfigEntry> = linkedMapOf(),
+    var levelCapEnabled: Boolean = true,
+    var tierCount: Int = 6,
+    var maxTierCaptureCount: Int = 512
 )
 
 /**
@@ -109,6 +115,18 @@ object DynamicConfig {
 
     private const val MIN_FORTUNE_CHANCE = 0.0f
     private const val MAX_FORTUNE_CHANCE = 1.0f
+
+    /**
+     * Bounds of [ConfigData.tierCount].
+     */
+    const val MIN_TIER_COUNT = 1
+    const val MAX_TIER_COUNT = 20
+
+    /**
+     * Bounds of [ConfigData.maxTierCaptureCount].
+     */
+    const val MIN_TIER_CAPTURE_COUNT = 50
+    const val MAX_TIER_CAPTURE_COUNT = 1025
 
     private val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
     private val NETWORK_GSON: Gson = Gson()
@@ -216,6 +234,8 @@ object DynamicConfig {
      */
     private fun sanitizeAndValidateEntries() {
         data.globalHoeFortuneChance = data.globalHoeFortuneChance.coerceIn(MIN_FORTUNE_CHANCE, MAX_FORTUNE_CHANCE)
+        data.tierCount = data.tierCount.coerceIn(MIN_TIER_COUNT, MAX_TIER_COUNT)
+        data.maxTierCaptureCount = data.maxTierCaptureCount.coerceIn(MIN_TIER_CAPTURE_COUNT, MAX_TIER_CAPTURE_COUNT)
         sanitizeGlobalDefaultBerryConfig(data.defaultBerryConfig)
 
         data.berryOverrides.values.forEach { entry ->
