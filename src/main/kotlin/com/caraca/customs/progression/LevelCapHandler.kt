@@ -14,8 +14,6 @@ import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerPlayer
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Enforces the level caps of [PlayerTiers] and tells players when they reach a new tier.
@@ -29,8 +27,6 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object LevelCapHandler {
 
-    private val knownTiers = ConcurrentHashMap<UUID, Int>()
-
     /**
      * Subscribes to Cobblemon's experience and Pokédex events and tracks online players' tiers.
      */
@@ -39,10 +35,10 @@ object LevelCapHandler {
         CobblemonEvents.POKEDEX_DATA_CHANGED_POST.subscribe(Priority.NORMAL, ::onPokedexChanged)
 
         ServerPlayConnectionEvents.JOIN.register { handler, _, _ ->
-            knownTiers[handler.player.uuid] = PlayerTiers.infoFor(handler.player.uuid).tier
+            PlayerTiers.refreshTier(handler.player.uuid)
         }
         ServerPlayConnectionEvents.DISCONNECT.register { handler, _ ->
-            knownTiers.remove(handler.player.uuid)
+            PlayerTiers.forgetTier(handler.player.uuid)
         }
     }
 
@@ -53,7 +49,7 @@ object LevelCapHandler {
      */
     fun refreshTiers(server: MinecraftServer) {
         server.playerList.players.forEach { player ->
-            knownTiers[player.uuid] = PlayerTiers.infoFor(player.uuid).tier
+            PlayerTiers.refreshTier(player.uuid)
         }
     }
 
@@ -87,7 +83,7 @@ object LevelCapHandler {
         if (event.knowledge != PokedexEntryProgress.OWNED) return
 
         val info = PlayerTiers.infoFor(event.playerUUID)
-        val previousTier = knownTiers.put(event.playerUUID, info.tier) ?: return
+        val previousTier = PlayerTiers.refreshTier(event.playerUUID) ?: return
         if (info.tier <= previousTier) return
 
         val player = event.playerUUID.getPlayer() ?: return

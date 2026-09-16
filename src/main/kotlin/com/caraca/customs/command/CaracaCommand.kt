@@ -5,6 +5,7 @@ import com.caraca.customs.config.DynamicConfig
 import com.caraca.customs.network.ServerNetworkHandler
 import com.caraca.customs.progression.LevelCapHandler
 import com.caraca.customs.progression.PlayerTiers
+import com.caraca.customs.progression.SpawnTierTable
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.context.CommandContext
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
@@ -71,6 +72,7 @@ object CaracaCommand {
             DynamicConfig.load()
             BerryGrowthModifier.applyGrowthConfigurations()
             LevelCapHandler.refreshTiers(source.server)
+            SpawnTierTable.rebuild()
             ServerNetworkHandler.broadcastConfig(source.server)
         }.fold(
             onSuccess = {

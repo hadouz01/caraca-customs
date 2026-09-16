@@ -90,15 +90,18 @@ Every different species registered as caught in your Pokédex counts towards you
 | Tier | Species caught | Level cap |
 |---|---|---|
 | 1 | 0 | 16 |
-| 2 | 102 | 32 |
-| 3 | 204 | 48 |
-| 4 | 306 | 64 |
-| 5 | 408 | 80 |
+| 2 | 85 | 32 |
+| 3 | 170 | 48 |
+| 4 | 255 | 64 |
+| 5 | 340 | 80 |
 | 6 | 512 | 100 |
 
 - **Configurable:** 1 to 20 tiers and 50 to 1025 species for the last one. Levels and species are split evenly between tiers, the leftover goes to the last tier, and the max level follows Cobblemon's config.
 - **At the cap:** Pokémon stop gaining experience from battles and candies (candies aren't consumed). Commands like `/levelup` and `/pokeedit` still go past it.
 - **Feedback:** messages when a Pokémon hits the cap and when you reach a new tier, plus `/caraca tier [player]` to check the progress.
+- **Spawn cap:** species are split into 16 groups by evolutionary stage and potential (low, medium and high potential for each stage, starters, regular and mythical legendaries). Stronger groups only spawn naturally around players with a high enough tier, fishing included. By default they unlock from tier 1 (low potential stage 1) to tier 6 (mythical legendaries).
+- **Spawn rules per group:** starting tier, max spawn rate multiplier (0.01 to 100), up to 3 early tiers at a reduced rate (25% by default, then half of that per tier; medium potential stage 1 shows up in tier 1 at 50%) and an optional gradual reduction in later tiers. All 1025 species are sorted into the groups by evolution stage and the strength of their final form. Species in no group (e.g. from other mods) spawn normally, and the lists in `data/caraca_customs/spawn_groups/` can be changed by datapacks.
+- **Enough species per tier:** each tier always offers enough spawnable species to reach the next one, plus a configurable surplus (25% by default). If it doesn't, the next groups are unlocked early at a reduced rate.
 
 ### Configuration
 
@@ -109,6 +112,7 @@ Everything lives in `config/caraca_customs/server_config.json`, and can also be 
   "levelCapEnabled": true,
   "tierCount": 6,
   "maxTierCaptureCount": 512,
+  "spawnCapEnabled": true,
   "globalHoeFortuneChance": 0.57,
   "defaultBerryConfig": { "minYield": 1, "maxYield": 6, "minGrowthTime": 1, "maxGrowthTime": 5 },
   "berryOverrides": {

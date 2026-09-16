@@ -6,7 +6,9 @@ import com.caraca.customs.config.BerryConfigEntry
 import com.caraca.customs.config.ConfigData
 import com.caraca.customs.config.DynamicConfig
 import com.caraca.customs.config.PokeBallConfigEntry
+import com.caraca.customs.config.SpawnGroupConfigEntry
 import com.caraca.customs.progression.LevelCapHandler
+import com.caraca.customs.progression.SpawnGroup
 import com.terraformersmc.modmenu.api.ConfigScreenFactory
 import com.terraformersmc.modmenu.api.ModMenuApi
 import me.shedaniel.clothconfig2.api.ConfigBuilder
@@ -55,6 +57,7 @@ class ModMenuIntegration : ModMenuApi {
 
             appendGeneralSettings(builder.getOrCreateCategory(Component.translatable("category.caraca_customs.general")), entryBuilder)
             appendProgressionSettings(builder.getOrCreateCategory(Component.translatable("category.caraca_customs.progression")), entryBuilder)
+            appendSpawnGroupSettings(builder.getOrCreateCategory(Component.translatable("category.caraca_customs.spawn_groups")), entryBuilder)
             appendBerryOverrideSettings(builder.getOrCreateCategory(Component.translatable("category.caraca_customs.berries")), entryBuilder)
             appendBallOverrideSettings(builder.getOrCreateCategory(Component.translatable("category.caraca_customs.overrides")), entryBuilder)
             appendDebugSettings(builder.getOrCreateCategory(Component.translatable("category.caraca_customs.debugs")), entryBuilder)
@@ -137,6 +140,115 @@ class ModMenuIntegration : ModMenuApi {
                     .setMax(DynamicConfig.MAX_TIER_CAPTURE_COUNT)
                     .setTooltip(Component.translatable("tooltip.caraca_customs.max_tier_capture_count"))
                     .setSaveConsumer { data.maxTierCaptureCount = it }
+                    .build()
+            )
+        }
+
+        /**
+         * Appends the spawn cap toggle and a drawer with the spawn rules of every [SpawnGroup] to the Spawn Groups tab.
+         */
+        private fun appendSpawnGroupSettings(category: ConfigCategory, entryBuilder: ConfigEntryBuilder) {
+            val data = DynamicConfig.data
+
+            category.addEntry(
+                entryBuilder.startBooleanToggle(
+                    Component.translatable("option.caraca_customs.spawn_cap_enabled"),
+                    data.spawnCapEnabled
+                )
+                    .setDefaultValue(DEFAULTS.spawnCapEnabled)
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.spawn_cap_enabled"))
+                    .setSaveConsumer { data.spawnCapEnabled = it }
+                    .build()
+            )
+
+            category.addEntry(
+                entryBuilder.startFloatField(
+                    Component.translatable("option.caraca_customs.tier_species_surplus"),
+                    data.tierSpeciesSurplus
+                )
+                    .setDefaultValue(DEFAULTS.tierSpeciesSurplus)
+                    .setMin(0.0f)
+                    .setMax(DynamicConfig.MAX_TIER_SPECIES_SURPLUS)
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.tier_species_surplus"))
+                    .setSaveConsumer { data.tierSpeciesSurplus = it }
+                    .build()
+            )
+
+            SpawnGroup.entries.forEach { group ->
+                val entry = data.spawnGroups.getOrPut(group.id) { group.defaultConfig }
+                val drawer = entryBuilder.startSubCategory(Component.translatable("spawn_group.caraca_customs.${group.id}"))
+                appendSpawnGroupFields(drawer, entryBuilder, entry, group.defaultConfig)
+                category.addEntry(drawer.build())
+            }
+        }
+
+        /**
+         * Populates the six spawn rule fields of a spawn group.
+         *
+         * @param drawer Target sub-category builder drawer.
+         * @param entryBuilder Entry builder utility.
+         * @param targetEntry Entry the fields are bound to.
+         * @param resetEntry Entry providing the reset values.
+         */
+        private fun appendSpawnGroupFields(
+            drawer: SubCategoryBuilder,
+            entryBuilder: ConfigEntryBuilder,
+            targetEntry: SpawnGroupConfigEntry,
+            resetEntry: SpawnGroupConfigEntry
+        ) {
+            fun label(key: String) = Component.translatable("option.caraca_customs.spawn_group.$key")
+            fun tooltip(key: String) = Component.translatable("tooltip.caraca_customs.spawn_group.$key")
+
+            drawer.add(
+                entryBuilder.startIntField(label("start_tier"), targetEntry.startTier)
+                    .setDefaultValue(resetEntry.startTier)
+                    .setMin(1)
+                    .setMax(DynamicConfig.MAX_TIER_COUNT)
+                    .setTooltip(tooltip("start_tier"))
+                    .setSaveConsumer { targetEntry.startTier = it }
+                    .build()
+            )
+            drawer.add(
+                entryBuilder.startFloatField(label("max_spawn_rate_multiplier"), targetEntry.maxSpawnRateMultiplier)
+                    .setDefaultValue(resetEntry.maxSpawnRateMultiplier)
+                    .setMin(DynamicConfig.MIN_SPAWN_RATE_MULTIPLIER)
+                    .setMax(DynamicConfig.MAX_SPAWN_RATE_MULTIPLIER)
+                    .setTooltip(tooltip("max_spawn_rate_multiplier"))
+                    .setSaveConsumer { targetEntry.maxSpawnRateMultiplier = it }
+                    .build()
+            )
+            drawer.add(
+                entryBuilder.startIntSlider(label("reduced_rate_interval"), targetEntry.reducedRateInterval, 0, DynamicConfig.MAX_REDUCED_RATE_INTERVAL)
+                    .setDefaultValue(resetEntry.reducedRateInterval)
+                    .setTooltip(tooltip("reduced_rate_interval"))
+                    .setSaveConsumer { targetEntry.reducedRateInterval = it }
+                    .build()
+            )
+            drawer.add(
+                entryBuilder.startFloatField(label("early_tier_spawn_rate"), targetEntry.earlyTierSpawnRate)
+                    .setDefaultValue(resetEntry.earlyTierSpawnRate)
+                    .setMin(DynamicConfig.MIN_SPAWN_RATE_MULTIPLIER)
+                    .setMax(DynamicConfig.MAX_EARLY_TIER_SPAWN_RATE)
+                    .setTooltip(tooltip("early_tier_spawn_rate"))
+                    .setSaveConsumer { targetEntry.earlyTierSpawnRate = it }
+                    .build()
+            )
+            drawer.add(
+                entryBuilder.startIntField(label("reduce_spawn_rate_tier"), targetEntry.reduceSpawnRateTier)
+                    .setDefaultValue(resetEntry.reduceSpawnRateTier)
+                    .setMin(0)
+                    .setMax(DynamicConfig.MAX_TIER_COUNT)
+                    .setTooltip(tooltip("reduce_spawn_rate_tier"))
+                    .setSaveConsumer { targetEntry.reduceSpawnRateTier = it }
+                    .build()
+            )
+            drawer.add(
+                entryBuilder.startFloatField(label("max_reduced_spawn_rate"), targetEntry.maxReducedSpawnRate)
+                    .setDefaultValue(resetEntry.maxReducedSpawnRate)
+                    .setMin(0.0f)
+                    .setMax(DynamicConfig.MAX_REDUCED_SPAWN_RATE)
+                    .setTooltip(tooltip("max_reduced_spawn_rate"))
+                    .setSaveConsumer { targetEntry.maxReducedSpawnRate = it }
                     .build()
             )
         }

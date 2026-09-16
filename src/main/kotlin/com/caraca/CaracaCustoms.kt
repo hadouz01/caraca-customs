@@ -8,6 +8,9 @@ import com.caraca.customs.config.DynamicConfig
 import com.caraca.customs.loot.CustomLootInjector
 import com.caraca.customs.network.ServerNetworkHandler
 import com.caraca.customs.progression.LevelCapHandler
+import com.caraca.customs.progression.SpawnGroupRegistry
+import com.caraca.customs.progression.SpawnTierTable
+import com.caraca.customs.progression.TierSpawningInfluence
 import com.caraca.customs.util.BuiltinPackRegistry
 import net.fabricmc.api.ModInitializer
 import net.minecraft.resources.ResourceLocation
@@ -47,9 +50,12 @@ object CaracaCustoms : ModInitializer {
 		BuiltinPackRegistry.register()
 		CustomLootInjector.register()
 		LevelCapHandler.register()
+		SpawnGroupRegistry.register()
+		SpawnTierTable.register()
+		TierSpawningInfluence.register()
 		CaracaCommand.register()
 
-		LOGGER.info("Custom PokéBalls, Berry System and player tiers initialized successfully!")
+		LOGGER.info("Custom PokéBalls, Berry System, player tiers and spawn groups initialized successfully!")
 	}
 
 	/**

@@ -4,6 +4,7 @@ import com.caraca.customs.config.DynamicConfig
 import com.cobblemon.mod.common.Cobblemon
 import com.cobblemon.mod.common.api.pokedex.CaughtCount
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Snapshot of a player's progression tier.
@@ -38,8 +39,11 @@ data class TierInfo(
  * Both progressions split their total into equal integer steps and give the remainder to the last tier:
  * - **Level caps:** tier `t` caps at `t * floor(X / Tq)`, `X` being Cobblemon's max level, and the last tier caps at `X`.
  *   With `X = 100` and `Tq = 6`: 16, 32, 48, 64, 80 and 100.
- * - **Capture thresholds:** tier 1 needs no captures, tier `t` needs `(t - 1) * floor(M / (Tq - 1))` and the last tier
- *   needs `M`, the configured max capture count. With `M = 512` and `Tq = 6`: 0, 102, 204, 306, 408 and 512.
+ * - **Capture thresholds:** tier 1 needs no captures, tier `t` needs `(t - 1) * floor(M / Tq)` and the last tier
+ *   needs `M`, the configured max capture count. With `M = 512` and `Tq = 6`: 0, 85, 170, 255, 340 and 512.
+ *
+ * Tiers are cached per player, since natural spawns check them constantly. [LevelCapHandler] keeps the cache up to date
+ * when players join, leave, catch new species or the config is reloaded.
  *
  * @author hadouz01
  * @since 1.4.0
@@ -82,8 +86,35 @@ object PlayerTiers {
         val maxCaptures = DynamicConfig.data.maxTierCaptureCount
         if (clampedTier == 1) return 0
         if (clampedTier == count) return maxCaptures
-        val step = maxCaptures / (count - 1)
+        val step = maxCaptures / count
         return (clampedTier - 1) * step
+    }
+
+    private val cachedTiers = ConcurrentHashMap<UUID, Int>()
+
+    /**
+     * Gets a player's tier from the cache, computing it on the first call.
+     *
+     * @param playerId Player UUID.
+     * @return The player's current tier.
+     */
+    fun cachedTier(playerId: UUID): Int = cachedTiers.getOrPut(playerId) { tierFor(caughtSpecies(playerId)) }
+
+    /**
+     * Recomputes and caches a player's tier.
+     *
+     * @param playerId Player UUID.
+     * @return The previously cached tier, or `null` if there was none.
+     */
+    fun refreshTier(playerId: UUID): Int? = cachedTiers.put(playerId, tierFor(caughtSpecies(playerId)))
+
+    /**
+     * Drops a player's cached tier, used when they leave.
+     *
+     * @param playerId Player UUID.
+     */
+    fun forgetTier(playerId: UUID) {
+        cachedTiers.remove(playerId)
     }
 
     /**
