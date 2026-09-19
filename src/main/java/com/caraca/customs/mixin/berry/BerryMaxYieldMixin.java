@@ -1,6 +1,7 @@
 package com.caraca.customs.mixin.berry;
 
 import com.caraca.customs.config.DynamicConfig;
+import com.caraca.customs.config.Feature;
 import com.cobblemon.mod.common.api.berry.Berry;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -27,6 +28,10 @@ public abstract class BerryMaxYieldMixin {
      */
     @Inject(method = "maxYield", at = @At("RETURN"), cancellable = true, remap = false)
     private void caraca$raiseMaxYield(CallbackInfoReturnable<Integer> cir) {
+        if (!Feature.berriesEnabled()) {
+            return;
+        }
+
         cir.setReturnValue(Math.max(cir.getReturnValue(), DynamicConfig.MAX_YIELD_CAP));
     }
 }

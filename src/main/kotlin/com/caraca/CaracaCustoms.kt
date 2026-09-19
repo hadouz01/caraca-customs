@@ -5,6 +5,8 @@ import com.caraca.customs.berry.BerryGrowthModifier
 import com.caraca.customs.berry.BerryHarvestHandler
 import com.caraca.customs.command.CaracaCommand
 import com.caraca.customs.config.DynamicConfig
+import com.caraca.customs.config.FeatureConditions
+import com.caraca.customs.follow.FollowSpeedHandler
 import com.caraca.customs.loot.CustomLootInjector
 import com.caraca.customs.network.ServerNetworkHandler
 import com.caraca.customs.progression.LevelCapHandler
@@ -43,6 +45,7 @@ object CaracaCustoms : ModInitializer {
 	override fun onInitialize() {
 		CustomBallRegistry.initialize()
 		DynamicConfig.load()
+		FeatureConditions.register()
 
 		ServerNetworkHandler.register()
 		BerryGrowthModifier.register()
@@ -53,6 +56,7 @@ object CaracaCustoms : ModInitializer {
 		SpawnGroupRegistry.register()
 		SpawnTierTable.register()
 		TierSpawningInfluence.register()
+		FollowSpeedHandler.register()
 		CaracaCommand.register()
 
 		LOGGER.info("Custom PokéBalls, Berry System, player tiers and spawn groups initialized successfully!")

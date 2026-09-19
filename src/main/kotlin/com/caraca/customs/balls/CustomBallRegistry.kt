@@ -3,6 +3,7 @@ package com.caraca.customs.balls
 import com.caraca.customs.balls.customs.CustomBalls
 import com.caraca.customs.balls.modules.ModularPokeBall
 import com.caraca.customs.balls.modules.ResourceGenerator
+import com.caraca.customs.config.Feature
 import com.cobblemon.mod.common.api.pokeball.PokeBalls
 import com.cobblemon.mod.common.item.group.CobblemonItemGroups
 import com.cobblemon.mod.common.pokeball.PokeBall
@@ -79,10 +80,13 @@ object CustomBallRegistry {
     }
 
     /**
-     * Hides the Cobblemon balls replaced by custom ones and prepends the custom balls to Cobblemon's utility tab.
+     * Hides the Cobblemon balls replaced by custom ones and prepends the custom balls to Cobblemon's utility tab, while
+     * [Feature.CUSTOM_BALLS] is enabled. The tab is rebuilt by the game when joining a world.
      */
     private fun registerCreativeTabEntries() {
         ItemGroupEvents.modifyEntriesEvent(CobblemonItemGroups.UTILITY_ITEMS_KEY).register { entries ->
+            if (!Feature.CUSTOM_BALLS.isEnabled) return@register
+
             val isReplacedCobblemonBall = { stack: ItemStack ->
                 val key = BuiltInRegistries.ITEM.getKey(stack.item)
                 key.namespace == "cobblemon" && ballsByName.containsKey(key.path)

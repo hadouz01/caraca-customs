@@ -2,6 +2,7 @@ package com.caraca.customs.mixin.berry;
 
 import com.caraca.customs.config.BerryConfigEntry;
 import com.caraca.customs.config.DynamicConfig;
+import com.caraca.customs.config.Feature;
 import com.caraca.customs.mulch.MulchTracker;
 import com.caraca.customs.util.BerryDebugNotifier;
 import com.cobblemon.mod.common.api.berry.Berry;
@@ -132,6 +133,10 @@ public abstract class BerryBlockEntityGrowthMixin implements MulchTracker {
      */
     @Inject(method = "goToNextStageTimer", at = @At("HEAD"), cancellable = true, remap = false)
     private void caraca$normalizeStageTimer(int stagesLeft, CallbackInfo ci) {
+        if (!Feature.berriesEnabled()) {
+            return;
+        }
+
         Berry currentBerry = this.berry();
         if (currentBerry == null || stagesLeft <= 0) {
             return;

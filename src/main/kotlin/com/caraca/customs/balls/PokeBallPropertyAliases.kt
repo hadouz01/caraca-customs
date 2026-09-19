@@ -1,8 +1,10 @@
 package com.caraca.customs.balls
 
 import com.caraca.CaracaCustoms
+import com.caraca.customs.config.Feature
 import com.cobblemon.mod.common.Cobblemon
 import com.cobblemon.mod.common.api.pokeball.PokeBalls
+import com.cobblemon.mod.common.util.simplify
 
 /**
  * Makes the custom Poké Balls usable through the `pokeball=` Pokémon property (`/givepokemon`, `/pokeedit`, spawns...).
@@ -10,6 +12,8 @@ import com.cobblemon.mod.common.api.pokeball.PokeBalls
  * Cobblemon defaults namespace-less values to `cobblemon:`, so `pokeball=lavender_ball` would never find a custom
  * ball and `pokeball=poke_ball` would always pick the native one. Bare names now resolve to the custom ball first,
  * while the native ones it replaces stay reachable through their full id (e.g. `cobblemon:poke_ball`).
+ *
+ * While [Feature.CUSTOM_BALLS] is disabled, Cobblemon's own behavior is kept.
  *
  * @author hadouz01
  * @since 1.3.20
@@ -29,7 +33,7 @@ object PokeBallPropertyAliases {
      */
     @JvmStatic
     fun resolve(value: String?): String? {
-        if (value.isNullOrBlank() || value.contains(':')) return null
+        if (!Feature.CUSTOM_BALLS.isEnabled || value.isNullOrBlank() || value.contains(':')) return null
         val ball = CustomBallRegistry.getBallByName(value) ?: return null
         return ball.id.toString()
     }
@@ -42,6 +46,7 @@ object PokeBallPropertyAliases {
      */
     @JvmStatic
     fun suggestions(): List<String> {
+        if (!Feature.CUSTOM_BALLS.isEnabled) return PokeBalls.all().map { it.name.simplify() }
         val customSuggestions = CustomBallRegistry.getRegisteredBalls().map { it.id.path }
         val others = PokeBalls.all().filter { it.name.namespace != CaracaCustoms.MOD_ID }
         val otherSuggestions = others.map { ball ->

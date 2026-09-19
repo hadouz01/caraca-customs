@@ -2,6 +2,7 @@ package com.caraca.customs.command
 
 import com.caraca.customs.berry.BerryGrowthModifier
 import com.caraca.customs.config.DynamicConfig
+import com.caraca.customs.config.FeatureToggles
 import com.caraca.customs.network.ServerNetworkHandler
 import com.caraca.customs.progression.LevelCapHandler
 import com.caraca.customs.progression.PlayerTiers
@@ -60,7 +61,8 @@ object CaracaCommand {
 
     /**
      * Reloads [DynamicConfig] from disk, re-applies [BerryGrowthModifier] parameters, refreshes the online players'
-     * tiers and re-syncs the new configuration to every connected client.
+     * tiers, re-syncs the new configuration to every connected client and reloads the datapacks when the custom Poké Balls
+     * toggle changed.
      *
      * @param context Command execution context containing source metadata.
      * @return Execution status code (1 for success, 0 for failure).
@@ -69,11 +71,13 @@ object CaracaCommand {
         val source = context.source
 
         return runCatching {
+            val before = FeatureToggles.snapshot()
             DynamicConfig.load()
             BerryGrowthModifier.applyGrowthConfigurations()
             LevelCapHandler.refreshTiers(source.server)
             SpawnTierTable.rebuild()
             ServerNetworkHandler.broadcastConfig(source.server)
+            FeatureToggles.applyChanges(source.server, before)
         }.fold(
             onSuccess = {
                 source.sendSuccess({ Component.translatable("text.caraca_customs.command.reload_success") }, true)

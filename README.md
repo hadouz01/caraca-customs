@@ -103,12 +103,21 @@ Every different species registered as caught in your Pokédex counts towards you
 - **Spawn rules per group:** starting tier, max spawn rate multiplier (0.01 to 100), up to 3 early tiers at a reduced rate (25% by default, then half of that per tier; medium potential stage 1 shows up in tier 1 at 50%) and an optional gradual reduction in later tiers. All 1025 species are sorted into the groups by evolution stage and the strength of their final form. Species in no group (e.g. from other mods) spawn normally, and the lists in `data/caraca_customs/spawn_groups/` can be changed by datapacks.
 - **Enough species per tier:** each tier always offers enough spawnable species to reach the next one, plus a configurable surplus (25% by default). If it doesn't, the next groups are unlocked early at a reduced rate.
 
+### Following Pokémon
+
+Sent out party Pokémon follow their owner at a size-based distance and speed up the further behind they fall, so they rarely need to teleport. Small and medium Pokémon (up to 2.5 m) stay 2 to 5 blocks away, big ones (2.5 m to 5 m) 3 to 6 blocks and extra big ones (over 5 m) 5 to 9 blocks. Wild Pokémon keep their normal speed.
+
 ### Configuration
 
 Everything lives in `config/caraca_customs/server_config.json`, and can also be edited through **Mod Menu**.
 
+- **Mechanic toggles:** the top of the General page turns each mechanic on or off without restarting: custom Poké Balls (recipes, chest loot, native recipe replacements and creative tab), berry mechanics, level cap, spawn cap and Pokémon follow speed. Turning the custom Poké Balls on or off reloads the datapacks so recipes update right away.
+
 ```json
 {
+  "customBallsEnabled": true,
+  "berryMechanicsEnabled": true,
+  "dynamicFollowSpeedEnabled": true,
   "levelCapEnabled": true,
   "tierCount": 6,
   "maxTierCaptureCount": 512,

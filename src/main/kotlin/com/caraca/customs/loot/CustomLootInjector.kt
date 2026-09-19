@@ -2,6 +2,8 @@ package com.caraca.customs.loot
 
 import com.caraca.customs.balls.CustomBallRegistry
 import com.caraca.customs.balls.modules.BallTier
+import com.caraca.customs.config.Feature
+import com.caraca.customs.config.FeatureConditions
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents
 import net.minecraft.world.level.storage.loot.LootPool
 import net.minecraft.world.level.storage.loot.entries.EmptyLootItem
@@ -15,6 +17,8 @@ import net.minecraft.world.level.storage.loot.providers.number.ConstantValue
  * - [BallTier.REGULAR]: villages, simple dungeons, mansions, temples, pyramids, outposts and every higher tier.
  * - [BallTier.ULTRA]: mineshafts, strongholds and every higher tier.
  * - [BallTier.CARACA]: Nether fortresses, End cities and ancient cities.
+ *
+ * Every pool only rolls while [Feature.CUSTOM_BALLS] is enabled, checked each time a chest is generated.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -83,7 +87,9 @@ object CustomLootInjector {
 
     private fun buildPool(tier: BallTier): LootPool.Builder {
         val spec = POOL_SPECS.getValue(tier)
-        val pool = LootPool.lootPool().setRolls(ConstantValue.exactly(spec.rolls))
+        val pool = LootPool.lootPool()
+            .setRolls(ConstantValue.exactly(spec.rolls))
+            .`when`(FeatureConditions.lootCondition(Feature.CUSTOM_BALLS))
 
         CustomBallRegistry.getRegisteredBalls()
             .filter { it.props.tier == tier }

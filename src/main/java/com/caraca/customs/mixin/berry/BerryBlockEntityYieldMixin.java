@@ -2,6 +2,7 @@ package com.caraca.customs.mixin.berry;
 
 import com.caraca.customs.config.BerryConfigEntry;
 import com.caraca.customs.config.DynamicConfig;
+import com.caraca.customs.config.Feature;
 import com.cobblemon.mod.common.api.berry.Berry;
 import com.cobblemon.mod.common.block.entity.BerryBlockEntity;
 import net.minecraft.resources.ResourceLocation;
@@ -42,6 +43,10 @@ public abstract class BerryBlockEntityYieldMixin {
      */
     @Inject(method = "generateSimpleYields", at = @At("TAIL"), remap = false)
     private void caraca$applyConfiguredSimpleYields(CallbackInfo ci) {
+        if (!Feature.berriesEnabled()) {
+            return;
+        }
+
         Berry currentBerry = this.berry();
         if (currentBerry == null) {
             return;

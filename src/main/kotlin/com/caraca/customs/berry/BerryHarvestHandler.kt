@@ -2,6 +2,7 @@ package com.caraca.customs.berry
 
 import com.caraca.customs.config.BerryConfigEntry
 import com.caraca.customs.config.DynamicConfig
+import com.caraca.customs.config.Feature
 import com.caraca.customs.mulch.MulchTracker
 import com.cobblemon.mod.common.api.events.CobblemonEvents
 import com.cobblemon.mod.common.api.events.berry.BerryHarvestEvent
@@ -24,6 +25,8 @@ import net.minecraft.world.item.enchantment.Enchantments
  * - [BerryYieldCalculationEvent]: applies configured yield bounds and Rich Mulch, then consumes one mulch use.
  * - [BerryHarvestEvent]: appends Hoe Fortune bonus drops, since it is the only event that carries the harvesting player.
  *
+ * Both handlers do nothing while [Feature.BERRY_MECHANICS] is disabled.
+ *
  * @author hadouz01
  * @since 1.0.0
  */
@@ -45,6 +48,7 @@ object BerryHarvestHandler {
      * @param event Target yield calculation event context.
      */
     private fun handleBerryYield(event: BerryYieldCalculationEvent) {
+        if (!Feature.BERRY_MECHANICS.isEnabled) return
         val config = DynamicConfig.getConfigFor(event.berry.identifier.toString())
         val blockEntity = event.world.getBlockEntity(event.pos)
         val isRichMulchActive = (blockEntity as? BerryBlockEntity)?.mulchVariant == MulchVariant.RICH
@@ -60,6 +64,7 @@ object BerryHarvestHandler {
      * @param event Target harvest event context.
      */
     private fun handleBerryHarvest(event: BerryHarvestEvent) {
+        if (!Feature.BERRY_MECHANICS.isEnabled) return
         val berryItem = event.berry.item() ?: return
         val bonus = calculateHoeFortuneBonus(event.player, event.world.random)
         if (bonus > 0) {

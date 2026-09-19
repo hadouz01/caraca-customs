@@ -202,6 +202,12 @@
   "text.caraca_customs.command.reload_success": "§a[Caraca Customs] Configurations and berry mechanics reloaded successfully!",
   "text.caraca_customs.command.reload_failure": "§c[Caraca Customs] Failed to reload configurations: %s",
 
+  "option.caraca_customs.custom_balls_enabled": "Custom Poké Balls",
+  "tooltip.caraca_customs.custom_balls_enabled": "When enabled, the custom Poké Balls can be crafted and found in chests, Cobblemon's Poké, Premier, Azure, Citrine, Roseate, Slate and Verdant ball recipes craft the custom versions, and they replace those balls in the creative tab. Recipes update right after saving or /caraca reload.",
+  "option.caraca_customs.berry_mechanics_enabled": "Berry Mechanics",
+  "tooltip.caraca_customs.berry_mechanics_enabled": "When enabled, berries use this mod's growth times, yields, Hoe Fortune bonus and limited mulch uses. When disabled, berries behave like in Cobblemon.",
+  "option.caraca_customs.follow_speed_enabled": "Pokémon Follow Speed",
+  "tooltip.caraca_customs.follow_speed_enabled": "When enabled, your sent out Pokémon follow you at a distance based on their size and speed up when they fall behind, so they don't need to teleport to catch up. Wild Pokémon aren't affected.",
   "category.caraca_customs.progression": "Progression",
   "option.caraca_customs.level_cap_enabled": "Tier Level Caps",
   "tooltip.caraca_customs.level_cap_enabled": "When enabled, your Pokémon can only level up to the cap of your current tier. Catch more species to unlock higher tiers.",

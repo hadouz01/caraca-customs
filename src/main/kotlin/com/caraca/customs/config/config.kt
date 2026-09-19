@@ -93,6 +93,10 @@ data class SpawnGroupConfigEntry(
  * @property defaultUltraPokeBallConfig Default capture rate config for ultra custom Poké Balls.
  * @property defaultCaracaBallConfig Default capture rate config for Caraca Poké Balls.
  * @property pokeBallOverrides Map of specific custom Poké Ball path identifiers to custom capture rate configurations.
+ * @property customBallsEnabled Toggles the custom Poké Balls: their recipes, loot, the native recipes that craft them, the
+ * creative tab replacement and the `pokeball=` aliases. Recipe changes apply on the next datapack reload.
+ * @property berryMechanicsEnabled Toggles the berry growth times, yields, Hoe Fortune bonus and mulch uses.
+ * @property dynamicFollowSpeedEnabled Toggles the size-based follow distance and catch-up speed of sent out party Pokémon.
  * @property levelCapEnabled Toggles the tier level caps on player-owned Pokémon.
  * @property tierCount Amount of progression tiers, from 1 to 20.
  * @property maxTierCaptureCount Caught species needed to reach the last tier, from 50 to 1025.
@@ -127,6 +131,9 @@ data class ConfigData(
         boostedCaptureRate = 6.7f
     ),
     val pokeBallOverrides: MutableMap<String, PokeBallConfigEntry> = linkedMapOf(),
+    var customBallsEnabled: Boolean = true,
+    var berryMechanicsEnabled: Boolean = true,
+    var dynamicFollowSpeedEnabled: Boolean = true,
     var levelCapEnabled: Boolean = true,
     var tierCount: Int = 6,
     var maxTierCaptureCount: Int = 512,

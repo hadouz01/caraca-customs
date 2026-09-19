@@ -5,6 +5,7 @@ import com.caraca.customs.berry.BerryGrowthModifier
 import com.caraca.customs.config.BerryConfigEntry
 import com.caraca.customs.config.ConfigData
 import com.caraca.customs.config.DynamicConfig
+import com.caraca.customs.config.FeatureToggles
 import com.caraca.customs.config.PokeBallConfigEntry
 import com.caraca.customs.config.SpawnGroupConfigEntry
 import com.caraca.customs.progression.LevelCapHandler
@@ -49,6 +50,7 @@ class ModMenuIntegration : ModMenuApi {
          * @return Fully configured [Screen] instance.
          */
         fun createConfigScreen(parent: Screen): Screen {
+            val togglesBefore = FeatureToggles.snapshot()
             val builder = ConfigBuilder.create()
                 .setParentScreen(parent)
                 .setTitle(Component.translatable("title.caraca_customs.config"))
@@ -65,18 +67,36 @@ class ModMenuIntegration : ModMenuApi {
             builder.setSavingRunnable {
                 DynamicConfig.save()
                 BerryGrowthModifier.applyGrowthConfigurations()
-                Minecraft.getInstance().singleplayerServer?.let { server -> server.execute { LevelCapHandler.refreshTiers(server) } }
+                Minecraft.getInstance().singleplayerServer?.let { server ->
+                    server.execute {
+                        LevelCapHandler.refreshTiers(server)
+                        FeatureToggles.applyChanges(server, togglesBefore)
+                    }
+                }
             }
 
             return builder.build()
         }
 
         /**
-         * Appends the Hoe Fortune chance, the global default berry drawer and the
+         * Appends the mechanic toggles, the Hoe Fortune chance, the global default berry drawer and the
          * default Poké Ball category drawers to the General tab.
          */
         private fun appendGeneralSettings(category: ConfigCategory, entryBuilder: ConfigEntryBuilder) {
             val data = DynamicConfig.data
+
+            fun toggle(key: String, value: Boolean, reset: Boolean, save: (Boolean) -> Unit) =
+                entryBuilder.startBooleanToggle(Component.translatable("option.caraca_customs.$key"), value)
+                    .setDefaultValue(reset)
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.$key"))
+                    .setSaveConsumer { save(it) }
+                    .build()
+
+            category.addEntry(toggle("custom_balls_enabled", data.customBallsEnabled, DEFAULTS.customBallsEnabled) { data.customBallsEnabled = it })
+            category.addEntry(toggle("berry_mechanics_enabled", data.berryMechanicsEnabled, DEFAULTS.berryMechanicsEnabled) { data.berryMechanicsEnabled = it })
+            category.addEntry(toggle("level_cap_enabled", data.levelCapEnabled, DEFAULTS.levelCapEnabled) { data.levelCapEnabled = it })
+            category.addEntry(toggle("spawn_cap_enabled", data.spawnCapEnabled, DEFAULTS.spawnCapEnabled) { data.spawnCapEnabled = it })
+            category.addEntry(toggle("follow_speed_enabled", data.dynamicFollowSpeedEnabled, DEFAULTS.dynamicFollowSpeedEnabled) { data.dynamicFollowSpeedEnabled = it })
 
             category.addEntry(
                 entryBuilder.startFloatField(
@@ -101,21 +121,10 @@ class ModMenuIntegration : ModMenuApi {
         }
 
         /**
-         * Appends the level cap toggle, the tier count and the max capture count to the Progression tab.
+         * Appends the tier count and the max capture count to the Progression tab.
          */
         private fun appendProgressionSettings(category: ConfigCategory, entryBuilder: ConfigEntryBuilder) {
             val data = DynamicConfig.data
-
-            category.addEntry(
-                entryBuilder.startBooleanToggle(
-                    Component.translatable("option.caraca_customs.level_cap_enabled"),
-                    data.levelCapEnabled
-                )
-                    .setDefaultValue(DEFAULTS.levelCapEnabled)
-                    .setTooltip(Component.translatable("tooltip.caraca_customs.level_cap_enabled"))
-                    .setSaveConsumer { data.levelCapEnabled = it }
-                    .build()
-            )
 
             category.addEntry(
                 entryBuilder.startIntSlider(
@@ -145,21 +154,10 @@ class ModMenuIntegration : ModMenuApi {
         }
 
         /**
-         * Appends the spawn cap toggle and a drawer with the spawn rules of every [SpawnGroup] to the Spawn Groups tab.
+         * Appends the species surplus and a drawer with the spawn rules of every [SpawnGroup] to the Spawn Groups tab.
          */
         private fun appendSpawnGroupSettings(category: ConfigCategory, entryBuilder: ConfigEntryBuilder) {
             val data = DynamicConfig.data
-
-            category.addEntry(
-                entryBuilder.startBooleanToggle(
-                    Component.translatable("option.caraca_customs.spawn_cap_enabled"),
-                    data.spawnCapEnabled
-                )
-                    .setDefaultValue(DEFAULTS.spawnCapEnabled)
-                    .setTooltip(Component.translatable("tooltip.caraca_customs.spawn_cap_enabled"))
-                    .setSaveConsumer { data.spawnCapEnabled = it }
-                    .build()
-            )
 
             category.addEntry(
                 entryBuilder.startFloatField(

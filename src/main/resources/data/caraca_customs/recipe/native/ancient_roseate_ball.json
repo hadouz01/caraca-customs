@@ -1,0 +1,34 @@
+{
+    "fabric:load_conditions": [
+        { "condition": "fabric:not", "value": { "condition": "caraca_customs:feature_enabled", "feature": "custom_balls" } }
+    ],
+    "type": "minecraft:crafting_shaped",
+    "category": "equipment",
+    "group": "basic_ancient_balls",
+    "pattern": [
+        " t ",
+        "lcr",
+        " b "
+    ],
+    "key": {
+        "t": {
+            "item": "cobblemon:pink_apricorn"
+        },
+        "l": {
+            "item": "cobblemon:tumblestone"
+        },
+        "c": {
+            "tag": "cobblemon:tier_1_poke_ball_materials"
+        },
+        "r": {
+            "item": "cobblemon:tumblestone"
+        },
+        "b": {
+            "item": "cobblemon:pink_apricorn"
+        }
+    },
+    "result": {
+        "count": 4,
+        "id": "cobblemon:ancient_roseate_ball"
+    }
+}
