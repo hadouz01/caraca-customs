@@ -2,7 +2,7 @@
     "format_version": "1.10.0",
     "particle_effect": {
         "description": {
-            "identifier": "cobblemon:pokeball/battle/sendflash",
+            "identifier": "cobblemon:cinnamonball/battle/sendflash",
             "basic_render_parameters": {
                 "material": "particles_alpha",
                 "texture": "caraca_customs:textures/particles/balls/cinnamonball/battle/sendflash"

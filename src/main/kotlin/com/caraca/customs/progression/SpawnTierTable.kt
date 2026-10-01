@@ -3,6 +3,7 @@ package com.caraca.customs.progression
 import com.caraca.CaracaCustoms
 import com.caraca.customs.config.DynamicConfig
 import com.cobblemon.mod.common.api.spawning.CobblemonSpawnPools
+import com.cobblemon.mod.common.api.spawning.detail.PokemonHerdSpawnDetail
 import com.cobblemon.mod.common.api.spawning.detail.PokemonSpawnDetail
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
 import net.minecraft.resources.ResourceLocation
@@ -114,7 +115,7 @@ object SpawnTierTable {
     }
 
     /**
-     * Collects every species with natural spawns in Cobblemon's world spawn pool.
+     * Collects every species with natural spawns in Cobblemon's world spawn pool, herd members included.
      *
      * @return The spawnable species, or `null` when the spawn pool isn't loaded (e.g. on the client).
      */
@@ -122,8 +123,14 @@ object SpawnTierTable {
         val details = runCatching { CobblemonSpawnPools.WORLD_SPAWN_POOL.details.toList() }.getOrNull() ?: return null
         if (details.isEmpty()) return null
         return details.asSequence()
-            .filterIsInstance<PokemonSpawnDetail>()
-            .mapNotNull { it.pokemon.species }
+            .flatMap { detail ->
+                when (detail) {
+                    is PokemonSpawnDetail -> sequenceOf(detail.pokemon.species)
+                    is PokemonHerdSpawnDetail -> detail.herdablePokemon.asSequence().map { it.pokemon.species }
+                    else -> emptySequence()
+                }
+            }
+            .filterNotNull()
             .mapNotNull { SpawnGroupRegistry.parseSpecies(it) }
             .toSet()
     }

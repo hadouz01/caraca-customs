@@ -61,13 +61,14 @@ object LevelCapHandler {
         if (!pokemon.isPlayerOwned()) return
         val ownerId = pokemon.getOwnerUUID() ?: return
 
-        val levelCap = PlayerTiers.infoFor(ownerId).levelCap
+        val info = PlayerTiers.infoFor(ownerId)
+        val levelCap = info.levelCap
         val owner = pokemon.getOwnerPlayer()
 
         if (pokemon.level >= levelCap) {
             event.cancel()
             if (event.source is CandyExperienceSource) {
-                owner?.let { notifyCapReached(it, pokemon.getDisplayName(), levelCap) }
+                owner?.let { notifyCapReached(it, pokemon.getDisplayName(), info) }
             }
             return
         }
@@ -75,7 +76,7 @@ object LevelCapHandler {
         val experienceToCap = pokemon.experienceGroup.getExperience(levelCap) - pokemon.experience
         if (event.experience >= experienceToCap) {
             event.experience = experienceToCap.coerceAtLeast(0)
-            owner?.let { notifyCapReached(it, pokemon.getDisplayName(), levelCap) }
+            owner?.let { notifyCapReached(it, pokemon.getDisplayName(), info) }
         }
     }
 
@@ -90,11 +91,20 @@ object LevelCapHandler {
         notifyTierUp(player, info)
     }
 
-    private fun notifyCapReached(player: ServerPlayer, pokemonName: Component, levelCap: Int) {
-        player.sendSystemMessage(
-            Component.translatable("text.caraca_customs.level_cap.reached", pokemonName, levelCap)
-                .withStyle(ChatFormatting.YELLOW)
-        )
+    /**
+     * Tells the owner a Pokémon hit the level cap, with the species still missing for the next tier and the level cap it
+     * unlocks.
+     */
+    private fun notifyCapReached(player: ServerPlayer, pokemonName: Component, info: TierInfo) {
+        val nextCaptures = info.nextTierCaptures
+        val nextLevelCap = info.nextLevelCap
+        val message = if (nextCaptures == null || nextLevelCap == null) {
+            Component.translatable("text.caraca_customs.level_cap.reached_max", pokemonName, info.levelCap)
+        } else {
+            val missing = (nextCaptures - info.caughtSpecies).coerceAtLeast(1)
+            Component.translatable("text.caraca_customs.level_cap.reached", pokemonName, info.levelCap, missing, info.tier + 1, nextLevelCap)
+        }
+        player.sendSystemMessage(message.withStyle(ChatFormatting.YELLOW))
     }
 
     private fun notifyTierUp(player: ServerPlayer, info: TierInfo) {

@@ -4,7 +4,8 @@
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
 		"PokemonPropertiesPokeBallMixin",
-		"PropertiesCompletionProviderMixin"
+		"PropertiesCompletionProviderMixin",
+		"ShapedRecipeResultMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

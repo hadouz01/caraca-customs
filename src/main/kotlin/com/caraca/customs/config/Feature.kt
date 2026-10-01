@@ -16,7 +16,8 @@ enum class Feature(val id: String, private val enabled: (ConfigData) -> Boolean)
     BERRY_MECHANICS("berry_mechanics", { it.berryMechanicsEnabled }),
     LEVEL_CAP("level_cap", { it.levelCapEnabled }),
     SPAWN_CAP("spawn_cap", { it.spawnCapEnabled }),
-    FOLLOW_SPEED("follow_speed", { it.dynamicFollowSpeedEnabled });
+    FOLLOW_SPEED("follow_speed", { it.dynamicFollowSpeedEnabled }),
+    SPAWN_LEVELS("spawn_levels", { it.tierSpawnLevelsEnabled });
 
     /**
      * Whether this mechanic is currently enabled in the active config.

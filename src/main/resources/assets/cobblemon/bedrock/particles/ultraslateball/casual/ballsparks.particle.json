@@ -2,7 +2,7 @@
   "format_version": "1.10.0",
   "particle_effect": {
     "description": {
-      "identifier": "cobblemon:ultraslateball/casual/ballsendsparkle",
+      "identifier": "cobblemon:ultraslateball/casual/ballsparks",
       "basic_render_parameters": {
         "material": "particles_alpha",
         "texture": "caraca_customs:textures/particles/balls/ultraslateball/ballsparks"

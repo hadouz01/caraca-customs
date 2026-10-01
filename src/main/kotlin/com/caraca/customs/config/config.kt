@@ -103,6 +103,11 @@ data class SpawnGroupConfigEntry(
  * @property spawnCapEnabled Toggles the tier spawn cap on natural spawns.
  * @property tierSpeciesSurplus Extra spawnable species each tier must offer beyond what the next tier needs, as a fraction
  * of it, from 0 to 2. Ex: 0.25 = a tier leading to one that needs 100 species must have at least 125 spawnable species.
+ * @property tierSpawnLevelsEnabled Toggles natural spawn levels following the level cap of the player's tier.
+ * @property averageSpawnLevelStart Where the most common spawn levels start, as a fraction of the way from the tier's
+ * minimum spawn level to its level cap, from 0 to 1.
+ * @property averageSpawnLevelEnd Where the most common spawn levels end, in the same scale, from 0 to 1.
+ * @property averageSpawnLevelChance Minimum share of natural spawns rolling a level from the most common range, from 0 to 1.
  * @property spawnGroups Map of [SpawnGroup] identifiers to their spawn rules.
  *
  * @author hadouz01
@@ -139,6 +144,10 @@ data class ConfigData(
     var maxTierCaptureCount: Int = 512,
     var spawnCapEnabled: Boolean = true,
     var tierSpeciesSurplus: Float = 0.25f,
+    var tierSpawnLevelsEnabled: Boolean = true,
+    var averageSpawnLevelStart: Float = 0.4f,
+    var averageSpawnLevelEnd: Float = 0.8f,
+    var averageSpawnLevelChance: Float = 0.65f,
     val spawnGroups: MutableMap<String, SpawnGroupConfigEntry> = linkedMapOf()
 )
 
@@ -362,6 +371,9 @@ object DynamicConfig {
         data.tierCount = data.tierCount.coerceIn(MIN_TIER_COUNT, MAX_TIER_COUNT)
         data.maxTierCaptureCount = data.maxTierCaptureCount.coerceIn(MIN_TIER_CAPTURE_COUNT, MAX_TIER_CAPTURE_COUNT)
         data.tierSpeciesSurplus = data.tierSpeciesSurplus.coerceIn(0.0f, MAX_TIER_SPECIES_SURPLUS)
+        data.averageSpawnLevelStart = data.averageSpawnLevelStart.coerceIn(0.0f, 1.0f)
+        data.averageSpawnLevelEnd = data.averageSpawnLevelEnd.coerceIn(data.averageSpawnLevelStart, 1.0f)
+        data.averageSpawnLevelChance = data.averageSpawnLevelChance.coerceIn(0.0f, 1.0f)
         data.spawnGroups.values.forEach { entry -> sanitizeSpawnGroup(entry, data.tierCount) }
         sanitizeGlobalDefaultBerryConfig(data.defaultBerryConfig)
 

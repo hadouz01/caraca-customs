@@ -96,6 +96,7 @@ class ModMenuIntegration : ModMenuApi {
             category.addEntry(toggle("berry_mechanics_enabled", data.berryMechanicsEnabled, DEFAULTS.berryMechanicsEnabled) { data.berryMechanicsEnabled = it })
             category.addEntry(toggle("level_cap_enabled", data.levelCapEnabled, DEFAULTS.levelCapEnabled) { data.levelCapEnabled = it })
             category.addEntry(toggle("spawn_cap_enabled", data.spawnCapEnabled, DEFAULTS.spawnCapEnabled) { data.spawnCapEnabled = it })
+            category.addEntry(toggle("spawn_levels_enabled", data.tierSpawnLevelsEnabled, DEFAULTS.tierSpawnLevelsEnabled) { data.tierSpawnLevelsEnabled = it })
             category.addEntry(toggle("follow_speed_enabled", data.dynamicFollowSpeedEnabled, DEFAULTS.dynamicFollowSpeedEnabled) { data.dynamicFollowSpeedEnabled = it })
 
             category.addEntry(
@@ -121,7 +122,7 @@ class ModMenuIntegration : ModMenuApi {
         }
 
         /**
-         * Appends the tier count and the max capture count to the Progression tab.
+         * Appends the tier count, the max capture count and the spawn level options to the Progression tab.
          */
         private fun appendProgressionSettings(category: ConfigCategory, entryBuilder: ConfigEntryBuilder) {
             val data = DynamicConfig.data
@@ -151,6 +152,19 @@ class ModMenuIntegration : ModMenuApi {
                     .setSaveConsumer { data.maxTierCaptureCount = it }
                     .build()
             )
+
+            fun fraction(key: String, value: Float, reset: Float, save: (Float) -> Unit) =
+                entryBuilder.startFloatField(Component.translatable("option.caraca_customs.$key"), value)
+                    .setDefaultValue(reset)
+                    .setMin(0.0f)
+                    .setMax(1.0f)
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.$key"))
+                    .setSaveConsumer { save(it) }
+                    .build()
+
+            category.addEntry(fraction("average_spawn_level_start", data.averageSpawnLevelStart, DEFAULTS.averageSpawnLevelStart) { data.averageSpawnLevelStart = it })
+            category.addEntry(fraction("average_spawn_level_end", data.averageSpawnLevelEnd, DEFAULTS.averageSpawnLevelEnd) { data.averageSpawnLevelEnd = it })
+            category.addEntry(fraction("average_spawn_level_chance", data.averageSpawnLevelChance, DEFAULTS.averageSpawnLevelChance) { data.averageSpawnLevelChance = it })
         }
 
         /**
