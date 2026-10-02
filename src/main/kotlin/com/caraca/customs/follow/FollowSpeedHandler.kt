@@ -31,15 +31,8 @@ import kotlin.math.sqrt
  * Keeps sent out party Pokémon close to their owners with a follow distance based on their size and a boosted speed,
  * so they keep up with a walking or sprinting owner instead of falling behind and teleporting.
  *
- * | Size | Height | Follow distance |
- * |---|---|---|
- * | Small | under 1 m | 2 to 5 blocks |
- * | Medium | 1 m to 2.5 m | 2 to 5 blocks |
- * | Big | 2.5 m to 5 m | 3 to 6 blocks |
- * | Extra big | over 5 m | 5 to 9 blocks |
- *
  * The boost is a transient multiplier on the entity's movement speed attribute, so it applies to every path the
- * Pokémon walks (its own and Cobblemon's) the moment it changes. Cobblemon's move control turns the attribute, the
+ * Pokémon walks. Cobblemon's move control turns the attribute, the
  * walk target's speed modifier, the species' walk, swim or fly speed and the Pokémon's scale into the speed it moves
  * at, and slow species like Chikorita end up far slower than a walking player. The multiplier brings that speed up to
  * [CRUISE_SPEED] while the Pokémon is in range, and to [CATCH_UP_SPEED] (plus [CATCH_UP_PER_BLOCK] for every block

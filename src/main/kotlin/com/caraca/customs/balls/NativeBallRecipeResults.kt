@@ -11,7 +11,7 @@ import net.minecraft.world.item.ItemStack
  * The built-in `caraca_recipe_overrides` pack already replaces Cobblemon's recipes, but any pack loaded above it (another
  * mod, a modpack or a world datapack) can bring Cobblemon's originals back. Applied by `ShapedRecipeResultMixin`, this
  * keeps those recipes crafting the custom balls no matter where they come from. Balls without a replacement, like the
- * Great Ball, are left alone, and nothing changes while the custom balls are off.
+ * Great Ball, are left alone, and nothing changes while this mod's custom balls are off.
  *
  * @author hadouz01
  * @since 1.9.0
