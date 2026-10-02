@@ -3,6 +3,7 @@
         { "condition": "caraca_customs:feature_enabled", "feature": "custom_balls" }
     ],
   "type": "minecraft:crafting_shaped",
+  "category": "equipment",
   "pattern": [
     "wti",
     "lcr",
