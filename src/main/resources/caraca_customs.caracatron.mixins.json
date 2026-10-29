@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "com.caraca.customs.mixin.caracatron",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"FinishScanningHandlerMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

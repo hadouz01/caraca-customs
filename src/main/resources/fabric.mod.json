@@ -31,6 +31,9 @@
 	"mixins": [
 		"caraca_customs.mixins.json",
 		"caraca_customs.pokeball.mixins.json",
+		"caraca_customs.progression.mixins.json",
+		"caraca_customs.caracatron.mixins.json",
+		"caraca_customs.client.mixins.json",
 		"caraca_customs.catchrate.mixins.json"
 	],
 	"depends": {

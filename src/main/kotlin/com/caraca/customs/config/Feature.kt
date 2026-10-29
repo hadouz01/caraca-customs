@@ -17,7 +17,9 @@ enum class Feature(val id: String, private val enabled: (ConfigData) -> Boolean)
     LEVEL_CAP("level_cap", { it.levelCapEnabled }),
     SPAWN_CAP("spawn_cap", { it.spawnCapEnabled }),
     FOLLOW_SPEED("follow_speed", { it.dynamicFollowSpeedEnabled }),
-    SPAWN_LEVELS("spawn_levels", { it.tierSpawnLevelsEnabled });
+    SPAWN_LEVELS("spawn_levels", { it.tierSpawnLevelsEnabled }),
+    EXP_SHARE_ALL("exp_share_all", { it.expShareAllEnabled }),
+    SHARED_TIERING("shared_tiering", { it.playerSharedTieringEnabled });
 
     /**
      * Whether this mechanic is currently enabled in the active config.

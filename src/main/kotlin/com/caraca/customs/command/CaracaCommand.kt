@@ -2,10 +2,12 @@ package com.caraca.customs.command
 
 import com.caraca.customs.berry.BerryGrowthModifier
 import com.caraca.customs.config.DynamicConfig
+import com.caraca.customs.config.Feature
 import com.caraca.customs.config.FeatureToggles
 import com.caraca.customs.network.ServerNetworkHandler
 import com.caraca.customs.progression.LevelCapHandler
 import com.caraca.customs.progression.PlayerTiers
+import com.caraca.customs.progression.SharedPokedex
 import com.caraca.customs.progression.SpawnTierTable
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.context.CommandContext
@@ -15,6 +17,8 @@ import net.minecraft.commands.Commands
 import net.minecraft.commands.arguments.EntityArgument
 import net.minecraft.network.chat.Component
 import net.minecraft.server.level.ServerPlayer
+import net.minecraft.world.level.storage.LevelResource
+import java.util.UUID
 
 /**
  * Server-side command registry and execution handler for the `/caraca` node.
@@ -22,6 +26,7 @@ import net.minecraft.server.level.ServerPlayer
  * - `/caraca reload` (operators): reloads the configuration.
  * - `/caraca tier`: shows the caller's progression tier.
  * - `/caraca tier <player>` (operators): shows another player's progression tier.
+ * - `/caraca sharedex rebuild` (operators): fills the shared Pokédex with the captures of every player who ever joined.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -55,6 +60,11 @@ object CaracaCommand {
                                 .requires { source -> source.hasPermission(PERMISSION_LEVEL_OP) }
                                 .executes { context -> executeTier(context, EntityArgument.getPlayer(context, "player")) }
                         )
+                )
+                .then(
+                    Commands.literal("sharedex")
+                        .requires { source -> source.hasPermission(PERMISSION_LEVEL_OP) }
+                        .then(Commands.literal("rebuild").executes(::executeSharedexRebuild))
                 )
         )
     }
@@ -113,6 +123,12 @@ object CaracaCommand {
             )
         }, false)
 
+        if (info.isShared) {
+            source.sendSuccess({ Component.translatable("text.caraca_customs.command.tier.shared", info.caughtSpecies, info.ownCaughtSpecies) }, false)
+        } else if (Feature.SHARED_TIERING.isEnabled) {
+            source.sendSuccess({ Component.translatable("text.caraca_customs.command.tier.solo") }, false)
+        }
+
         if (DynamicConfig.data.levelCapEnabled) {
             source.sendSuccess({ Component.translatable("text.caraca_customs.command.tier.level_cap", info.levelCap) }, false)
         }
@@ -127,5 +143,28 @@ object CaracaCommand {
         source.sendSuccess({ nextLine }, false)
 
         return info.tier
+    }
+
+    /**
+     * Backfills the shared Pokédex from every player who ever joined the world, online or not, and refreshes the online
+     * players' tiers without notifying them.
+     *
+     * @param context Command execution context containing source metadata.
+     * @return Execution status code, the amount of players read.
+     */
+    private fun executeSharedexRebuild(context: CommandContext<CommandSourceStack>): Int {
+        val server = context.source.server
+        val playerFiles = server.getWorldPath(LevelResource.PLAYER_DATA_DIR).toFile()
+            .listFiles { file -> file.extension == "dat" }
+            .orEmpty()
+        val playerIds = playerFiles.mapNotNull { runCatching { UUID.fromString(it.nameWithoutExtension) }.getOrNull() }
+
+        playerIds.forEach { SharedPokedex.backfill(it) }
+        LevelCapHandler.refreshTiers(server)
+
+        context.source.sendSuccess({
+            Component.translatable("text.caraca_customs.command.sharedex.rebuilt", playerIds.size, SharedPokedex.sharedCount())
+        }, true)
+        return playerIds.size
     }
 }

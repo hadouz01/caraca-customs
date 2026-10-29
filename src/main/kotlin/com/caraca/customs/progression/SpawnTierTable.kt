@@ -29,8 +29,16 @@ object SpawnTierTable {
 
     private val LOGGER = LoggerFactory.getLogger(CaracaCustoms.MOD_ID)
 
+    /**
+     * Built multipliers and the tiers where groups had to be unlocked early.
+     *
+     * @property rates Multiplier of every group at every tier, indexed by `tier - 1`.
+     * @property earlyUnlocks First tier each group was unlocked in by the species guarantee.
+     */
+    private class Table(val rates: Map<SpawnGroup, FloatArray>, val earlyUnlocks: Map<SpawnGroup, Int>)
+
     @Volatile
-    private var table: Map<SpawnGroup, FloatArray>? = null
+    private var table: Table? = null
 
     /**
      * Rebuilds the table whenever the server starts or its datapacks are reloaded, since the spawn pool changes too.
@@ -62,25 +70,40 @@ object SpawnTierTable {
      * @return The multiplier applied to the species' original spawn rate. `0` means it can't spawn.
      */
     fun multiplierAt(group: SpawnGroup, tier: Int): Float {
-        val current = table ?: build().also { table = it }
-        val rates = current[group] ?: return 0.0f
+        val rates = current().rates[group] ?: return 0.0f
         return rates[(tier.coerceIn(1, rates.size)) - 1]
     }
 
-    private fun build(): Map<SpawnGroup, FloatArray> {
+    /**
+     * Gets the tier a group belongs to: its starting tier, or the tier the species guarantee unlocked it in, if earlier.
+     * Reduced rate tiers before the starting tier don't count, so a group starting at tier 5 belongs to tier 5 even
+     * though it already spawns at a lower rate in tier 4.
+     *
+     * @param group Target spawn group.
+     * @return The group's tier, from 1 to the tier count.
+     */
+    fun homeTierOf(group: SpawnGroup): Int {
+        val startTier = DynamicConfig.getSpawnGroupConfigFor(group).startTier.coerceIn(1, PlayerTiers.tierCount)
+        val unlockedAt = current().earlyUnlocks[group] ?: return startTier
+        return minOf(startTier, unlockedAt)
+    }
+
+    private fun current(): Table = table ?: build().also { table = it }
+
+    private fun build(): Table {
         val tierCount = PlayerTiers.tierCount
         val configs = SpawnGroup.entries.associateWith { DynamicConfig.getSpawnGroupConfigFor(it) }
         val rates = SpawnGroup.entries.associateWith { group ->
             FloatArray(tierCount) { index -> SpawnRateRules.multiplierAt(configs.getValue(group), index + 1) }
         }
 
-        val spawnable = spawnableSpecies() ?: return rates
+        val spawnable = spawnableSpecies() ?: return Table(rates, emptyMap())
         val speciesPerGroup = SpawnGroup.entries.associateWith { group ->
             spawnable.count { SpawnGroupRegistry.groupOf(it) == group }
         }
         val ungrouped = spawnable.count { SpawnGroupRegistry.groupOf(it) == null }
         val surplus = DynamicConfig.data.tierSpeciesSurplus
-        val unlockedEarly = linkedSetOf<SpawnGroup>()
+        val unlockedEarly = linkedMapOf<SpawnGroup, Int>()
 
         for (tier in 1 until tierCount) {
             val index = tier - 1
@@ -93,12 +116,12 @@ object SpawnTierTable {
                 .sortedWith(compareBy<SpawnGroup> { configs.getValue(it).startTier }.thenByDescending { speciesPerGroup.getValue(it) })
                 .forEach { group ->
                     if (available >= needed) return@forEach
-                    unlockedEarly += group
+                    unlockedEarly[group] = tier
                     available += speciesPerGroup.getValue(group)
                     LOGGER.info("Tier {} needs more spawnable species to reach tier {}, unlocking {} early", tier, tier + 1, group.id)
                 }
 
-            unlockedEarly.forEach { group ->
+            unlockedEarly.keys.forEach { group ->
                 val groupRates = rates.getValue(group)
                 if (groupRates[index] <= 0.0f) {
                     val config = configs.getValue(group)
@@ -111,7 +134,7 @@ object SpawnTierTable {
             }
         }
 
-        return rates
+        return Table(rates, unlockedEarly)
     }
 
     /**
@@ -119,7 +142,7 @@ object SpawnTierTable {
      *
      * @return The spawnable species, or `null` when the spawn pool isn't loaded (e.g. on the client).
      */
-    private fun spawnableSpecies(): Set<ResourceLocation>? {
+    fun spawnableSpecies(): Set<ResourceLocation>? {
         val details = runCatching { CobblemonSpawnPools.WORLD_SPAWN_POOL.details.toList() }.getOrNull() ?: return null
         if (details.isEmpty()) return null
         return details.asSequence()

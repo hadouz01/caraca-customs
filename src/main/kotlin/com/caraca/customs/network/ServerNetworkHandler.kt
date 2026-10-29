@@ -17,10 +17,15 @@ import net.minecraft.server.level.ServerPlayer
 object ServerNetworkHandler {
 
     /**
-     * Registers the S2C payload type and sends the active configuration to every joining player.
+     * Registers the config sync and Caracatron payload types and sends the active configuration to every joining player.
      */
     fun register() {
         PayloadTypeRegistry.playS2C().register(ConfigSyncPayload.TYPE, ConfigSyncPayload.CODEC)
+        PayloadTypeRegistry.playS2C().register(CaracatronOpenPayload.TYPE, CaracatronOpenPayload.CODEC)
+        PayloadTypeRegistry.playS2C().register(CaracatronSpawnInfoPayload.TYPE, CaracatronSpawnInfoPayload.CODEC)
+        PayloadTypeRegistry.playC2S().register(CaracatronSpawnRequestPayload.TYPE, CaracatronSpawnRequestPayload.CODEC)
+        PayloadTypeRegistry.playS2C().register(CaracatronMaterialInfoPayload.TYPE, CaracatronMaterialInfoPayload.CODEC)
+        PayloadTypeRegistry.playC2S().register(CaracatronMaterialRequestPayload.TYPE, CaracatronMaterialRequestPayload.CODEC)
 
         ServerPlayConnectionEvents.JOIN.register { handler, _, _ ->
             sendConfig(handler.player)

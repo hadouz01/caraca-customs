@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "com.caraca.customs.mixin.progression",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"ExpShareAllMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

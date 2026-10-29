@@ -99,10 +99,38 @@ Every different species registered as caught in your Pokédex counts towards you
 - **Configurable:** 1 to 20 tiers and 50 to 1025 species for the last one. Levels and species are split evenly between tiers, the leftover goes to the last tier, and the max level follows Cobblemon's config.
 - **At the cap:** Pokémon stop gaining experience from battles and candies (candies aren't consumed). Commands like `/levelup` and `/pokeedit` still go past it.
 - **Feedback:** messages when a Pokémon hits the cap (with how many species are missing for the next tier and its level cap) and when you reach a new tier, plus `/caraca tier [player]` to check the progress.
-- **Spawn cap:** species are split into 16 groups by evolutionary stage and potential (low, medium and high potential for each stage, starters, regular and mythical legendaries). Stronger groups only spawn naturally around players with a high enough tier, fishing and herds included (herd members above your tier are swapped for allowed ones). By default they unlock from tier 1 (low potential stage 1) to tier 6 (mythical legendaries).
+- **Spawn cap:** species are split into 16 groups by evolutionary stage and potential (low, medium and high potential for each stage, starters, regular and mythical legendaries). Stronger groups only spawn naturally around players with a high enough tier, fishing and herds included (herd members above your tier are swapped for allowed ones). Placed Poké Snacks follow the highest tier among the players within a chunk of them (the nearest player when nobody is that close), or the world's tier while sharing tiers. By default they unlock from tier 1 (low potential stage 1) to tier 6 (mythical legendaries).
 - **Spawn rules per group:** starting tier, max spawn rate multiplier (0.01 to 100), up to 3 early tiers at a reduced rate (25% by default, then half of that per tier; medium potential stage 1 shows up in tier 1 at 50%) and an optional gradual reduction in later tiers. All 1025 species are sorted into the groups by evolution stage and the strength of their final form (Pokémon that only evolve from a baby, like Lucario, go by their base stats as stage 2 or 3). Species in no group (e.g. from other mods) spawn normally, and the lists in `data/caraca_customs/spawn_groups/` can be changed by datapacks.
-- **Enough species per tier:** each tier always offers enough spawnable species to reach the next one, plus a configurable surplus (25% by default). If it doesn't, the next groups are unlocked early at a reduced rate.
-- **Spawn levels:** wild Pokémon around you spawn between a minimum level (half your level cap minus 3, 5 or 10, depending on the cap) and your level cap. Most land in an average range from 40% to 80% of the way (at least 65% of the spawns), and levels further from it get rarer, so the minimum level and the cap are very rare. With 6 tiers, tier 2 spawns levels 13 to 32, mostly 21 to 28. The range and share are configurable.
+- **Enough species per tier:** each tier always offers enough spawnable species to reach the next one, plus a configurable surplus (40% by default). If it doesn't, the next groups are unlocked early at a reduced rate.
+- **Spawn levels:** wild Pokémon around you spawn between a minimum level (half your level cap minus 3, 5 or 10, depending on the cap) and your level cap. Most land in an average range from 40% to 80% of the way (at least 65% of the spawns), and levels further from it get rarer, so the minimum level and the cap are very rare. With 6 tiers, tier 2 spawns levels 13 to 32, mostly 21 to 28. Pokémon attracted by a Poké Snack use the snack's tier. The range and share are configurable.
+- **Shared tiers:** with player-shared tiering on (off by default), every different species caught by any player counts towards everyone's tier, so two players with 40 different species each reach the tier that needs 80. Captures are kept in a world Pokédex that only stores which players caught each species, recorded even while the option is off, and older captures are added when each player joins (or all at once with `/caraca sharedex rebuild`). Players in the **Tier-share Blocklist** progress with their own captures only, and the species only they caught don't count for the others.
+
+### Exp. Share All
+
+When one Pokémon in your party earns battle experience, the rest of the party earns some too, as if everyone held an Exp. Share. Only players' Pokémon are affected.
+
+| Division | 100 exp in a party of 4 |
+|---|---|
+| **Multiplied** (default, ×0.5) | 100 for the Pokémon that fought, 50 for each of the others |
+| **Shared, Equally** | 25 for everyone |
+| **Shared, Balanced** | 50 for the Pokémon that fought, about 17 for each of the others |
+
+A Lucky Egg only boosts the Pokémon holding it, and a Pokémon holding an Exp. Share gets +0.5× (configurable from 0 to 100) for every party member holding a Lucky Egg, split between every Exp. Share holder: 3.5× with five Lucky Eggs and one Exp. Share, 2× each with four Lucky Eggs and two Exp. Shares. Benched Pokémon get experience only, no EVs, unless they really hold an Exp. Share. Every slice still stops at the level cap and follows Cobblemon's own `awardExperienceOnBattleLoss` and `awardExperienceToFaintedPokemon` options.
+
+### Caracatron 3000
+
+A handheld device (in Cobblemon's utility tab) that opens a Pokédex-style screen with your tier progress:
+
+- **Header:** your tier (the world's while sharing tiers), how many Pokémon are available up to it and how many of them were caught.
+- **Pokémon list:** every Pokémon sorted by tier (the default), every Pokémon sorted by dex number, or only the Pokémon of one tier (a Pokémon is listed in the first tier it can spawn in, even at a reduced rate, so every tier shows all the Pokémon that count towards reaching the next one; legendaries and mythicals without natural spawns are listed in their spawn group's tier), with their model, dex number and a Poké Ball icon (also shown next to the selected Pokémon's name): red when you caught it, yellow topped when only other players did, and none when nobody caught it. Each slot is tinted with its tier's color (yellow green, green, aqua, blue, magenta and red for the default six tiers; past six tiers the slots get a blended outline instead), and uncaught Pokémon get a dark filter over their slot. Search by name (ignoring upper case and accents) or dex number. While sharing tiers, the globe switches between everyone's captures and yours.
+- **Spawn info:** types, dex number, name, tier (written in the tier's color) and every natural spawn of the selected Pokémon for the picked rarity: place, biomes, time, weather, height, structures and weight, plus when it unlocks, its spawn rate multiplier and the spawn levels of your tier. Hovering a biome group (like "Forest") lists every biome in it, one per line with where it comes from (Vanilla or the biome mod that adds it).
+- **How to attract it:** the Poké Snack recipe, the three best seasonings to put in it for the selected Pokémon, and every seasoning that boosts it: berries for its type or egg group (10× spawn rate each, multiplying each other), EV berries that leave only Pokémon giving that EV, and golden foods that favor rarer spawns. Hovering any ingredient or seasoning shows how to get it, one entry per line: the biomes where a berry grows naturally and the berries that mutate into it when planted side by side, or the recipe of other items.
+- **Scanner:** holding the use button with the Caracatron opens Cobblemon's Pokédex scanner, scanning Pokémon faster than a Pokédex (2× by default, from 1× to 5× with the "Caracatron Scan Speed" option); a quick click opens the Caracatron.
+- **Dynamic light:** with LambDynamicLights installed, the Caracatron lights up its surroundings at level 15 while held or dropped.
+- **Pages:** the arrows at the top of the screen switch between the Caracatron, Cobblemon's Pokédex (opened on the selected Pokémon, inside the Caracatron's frame and dressed in your screen color, its textures recolored in game unless a resource pack provides `colors/<color>/pokedex/<texture>.png`), Drops, Materials and the Guide (still under construction). Coming back to the Caracatron keeps your selection, search and filter.
+- **Drops:** the same list, with every model showing whether caught or not, but the search looks for items (by name or id, like `minecraft:emerald`) and lists only the Pokémon that drop them. The right panel shows the icon of every item the selected Pokémon drops (hover it for the name), with amounts and chances, the searched items' lines in bold green (hover an item to underline it, click it to search its id), and with the Pasture Loot mod, which items pastures drop or block.
+- **Materials:** search any block or item, from any mod, by name or id (two letters or more) and pick it to see where it generates: dimension, biomes (hover a biome group to list its biomes), altitude with the most common range, tries per chunk, rarity and vein size. Items dropped by a block (like Raw Iron) show the block they drop from (Iron Ore). It also lists recipes, berry groves and how many Pokémon drop it, which opens the Drops page searching that item when clicked. Each line's label (dimension, altitude, structure...) is bold and colored to stand out. A second tab under the panel lists the structures built with it (villages, ruins, shipwrecks, Cobblemon's structures and any datapack or mod structure made of templates) with their biomes, what you can dig up there with a brush (Cobblemon fossils included) and the chests holding it, grouped by structure.
+- **Screen color:** picked in the select at the top center of every page (or in Mod Menu), or by scrolling the mouse wheel over it, a personal option kept by each player even on servers. Cerulean, Blanc, Canary, Lime, Noir and Pink come with the mod, and the screen's texts switch between white and dark (each with a 1 px shadow, dark under white text and white under dark text) to stay readable on each one. The screen of the Caracatron you hold, and the ones you see other players holding, shows your own color. Every color folder in `assets/caraca_customs/textures/gui/caracatron/colors/` shows up in the list (with a `models/item/caracatrons/screens/<color>.json` model for the held device), so resource packs can add new screens.
 
 ### Following Pokémon
 
@@ -112,7 +140,7 @@ Sent out party Pokémon follow their owner at a size-based distance with a speed
 
 Everything lives in `config/caraca_customs/server_config.json`, and can also be edited through **Mod Menu**.
 
-- **Mechanic toggles:** the top of the General page turns each mechanic on or off without restarting: custom Poké Balls (recipes, chest loot, native recipe replacements and creative tab), berry mechanics, level cap, spawn cap, tier spawn levels and Pokémon follow speed. Turning the custom Poké Balls on or off reloads the datapacks so recipes update right away.
+- **Mechanic toggles:** the top of the General page turns each mechanic on or off without restarting: custom Poké Balls (recipes, chest loot, native recipe replacements and creative tab), berry mechanics, level cap, spawn cap, tier spawn levels, Pokémon follow speed, Exp. Share All and player-shared tiering. Turning the custom Poké Balls on or off reloads the datapacks so recipes update right away.
 
 ```json
 {
@@ -127,6 +155,12 @@ Everything lives in `config/caraca_customs/server_config.json`, and can also be 
   "averageSpawnLevelStart": 0.4,
   "averageSpawnLevelEnd": 0.8,
   "averageSpawnLevelChance": 0.65,
+  "expShareAllEnabled": true,
+  "defaultExpShareConfig": { "expDivisionMethod": "MULTIPLIED", "expShareMethod": "EQUALLY", "expShareMultiplier": 0.5, "expShareItemBonus": 0.5 },
+  "playerSharedTieringEnabled": false,
+  "tierShareBlocklist": ["Steve"],
+  "caracatronScreenColor": "cerulean",
+  "caracatronScanSpeed": 2,
   "globalHoeFortuneChance": 0.57,
   "defaultBerryConfig": { "minYield": 1, "maxYield": 6, "minGrowthTime": 1, "maxGrowthTime": 5 },
   "berryOverrides": {
@@ -139,14 +173,16 @@ Everything lives in `config/caraca_customs/server_config.json`, and can also be 
 }
 ```
 
-In this example, Oran trees always give 3 to 6 berries but keep the default growth time, and the Ultra Saffron Ball keeps the Ultra default rate but gets a 10× boost against Fire Pokémon.
+In this example, Oran trees always give 3 to 6 berries but keep the default growth time, and the Ultra Saffron Ball keeps the Ultra default rate but gets a 10× boost against Fire Pokémon. Steve is in the tier-share blocklist, which only matters once shared tiering is turned on.
 
 - **Servers:** the server's config is sent to every player who joins, so tooltips and the catch rate HUD match the server.
 - **`/caraca reload`** (operators only): applies config changes without restarting and sends them to everyone online.
 - **Growth debugger:** shows in chat how long each berry stage will take and which mulch is active.
 
-Translated into **English** and **Brazilian Portuguese**.
+Translated into **English** and **Brazilian Portuguese**, also used for **European Portuguese**.
 
 ## License
 
 Licensed under **CC0 1.0 Universal**. See [LICENSE](LICENSE).
+
+The Caracatron 3000 item models and textures (`assets/caraca_customs/models/item/caracatron_3000_model*.json` and `assets/caraca_customs/textures/item/caracatrons/`) are adapted from [Cobblemon](https://gitlab.com/cable-mc/cobblemon)'s Pokédex, and the small caught icon of the Caracatron's slots (`caught_seen_icon_slot_small.png`) follows the shape of Cobblemon's small caught icon; these files stay under the **Mozilla Public License 2.0**, like the rest of Cobblemon.

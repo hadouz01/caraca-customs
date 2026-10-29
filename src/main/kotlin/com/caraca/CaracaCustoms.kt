@@ -3,13 +3,16 @@ package com.caraca
 import com.caraca.customs.balls.CustomBallRegistry
 import com.caraca.customs.berry.BerryGrowthModifier
 import com.caraca.customs.berry.BerryHarvestHandler
+import com.caraca.customs.caracatron.Caracatron
 import com.caraca.customs.command.CaracaCommand
 import com.caraca.customs.config.DynamicConfig
 import com.caraca.customs.config.FeatureConditions
 import com.caraca.customs.follow.FollowSpeedHandler
 import com.caraca.customs.loot.CustomLootInjector
 import com.caraca.customs.network.ServerNetworkHandler
+import com.caraca.customs.progression.ExpShareAll
 import com.caraca.customs.progression.LevelCapHandler
+import com.caraca.customs.progression.SharedPokedex
 import com.caraca.customs.progression.SpawnGroupRegistry
 import com.caraca.customs.progression.SpawnTierTable
 import com.caraca.customs.progression.TierSpawningInfluence
@@ -48,18 +51,21 @@ object CaracaCustoms : ModInitializer {
 		FeatureConditions.register()
 
 		ServerNetworkHandler.register()
+		Caracatron.register()
 		BerryGrowthModifier.register()
 		BerryHarvestHandler.register()
 		BuiltinPackRegistry.register()
 		CustomLootInjector.register()
+		SharedPokedex.register()
 		LevelCapHandler.register()
+		ExpShareAll.register()
 		SpawnGroupRegistry.register()
 		SpawnTierTable.register()
 		TierSpawningInfluence.register()
 		FollowSpeedHandler.register()
 		CaracaCommand.register()
 
-		LOGGER.info("Custom PokéBalls, Berry System, player tiers and spawn groups initialized successfully!")
+		LOGGER.info("Custom PokéBalls, Berry System, player tiers, spawn groups, Exp. Share All and the Caracatron 3000 initialized successfully!")
 	}
 
 	/**

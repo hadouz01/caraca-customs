@@ -2,15 +2,19 @@ package com.caraca.customs.config
 
 import com.caraca.customs.balls.CustomBallRegistry
 import com.caraca.customs.balls.modules.BallTier
+import com.caraca.customs.constants.ExpDivisionMethod
+import com.caraca.customs.constants.ExpShareMethod
 import com.caraca.customs.progression.SpawnGroup
 import com.caraca.customs.progression.SpawnTierTable
 import com.cobblemon.mod.common.api.berry.Berries
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import net.fabricmc.loader.api.FabricLoader
+import net.minecraft.resources.ResourceLocation
 import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
+import kotlin.math.roundToInt
 
 /**
  * Data container representing individual berry configuration properties.
@@ -81,6 +85,27 @@ data class SpawnGroupConfigEntry(
 }
 
 /**
+ * Experience distribution rules used by Exp. Share All.
+ *
+ * @property expDivisionMethod Whether the active Pokémon's experience is split between the party or copied to it.
+ * @property expShareMethod How [ExpDivisionMethod.SHARED] splits the experience: the same slice for everyone, or half
+ * for the active Pokémon and half for the rest of the party.
+ * @property expShareMultiplier Fraction of the active Pokémon's experience every other member gets with
+ * [ExpDivisionMethod.MULTIPLIED], from 0 to 1.
+ * @property expShareItemBonus Extra experience multiplier every party member holding a Lucky Egg adds to held Exp. Shares,
+ * split between every Exp. Share holder, from 0 to 100. Ex: 0.5 with 4 Lucky Eggs and 2 Exp. Shares = 2× for each holder.
+ *
+ * @author hadouz01
+ * @since 1.11.0
+ */
+data class ExpShareConfigEntry(
+    var expDivisionMethod: ExpDivisionMethod = ExpDivisionMethod.MULTIPLIED,
+    var expShareMethod: ExpShareMethod = ExpShareMethod.EQUALLY,
+    var expShareMultiplier: Float = 0.5f,
+    var expShareItemBonus: Float = 0.5f
+)
+
+/**
  * Main configuration model for mod customization including berries and custom Poké Balls.
  *
  * Employs insertion-ordered map instances to preserve natural layout structure across serialization and GUI rendering.
@@ -92,23 +117,33 @@ data class SpawnGroupConfigEntry(
  * @property defaultRegularPokeBallConfig Default capture rate config for regular custom Poké Balls.
  * @property defaultUltraPokeBallConfig Default capture rate config for ultra custom Poké Balls.
  * @property defaultCaracaBallConfig Default capture rate config for Caraca Poké Balls.
+ * @property defaultExpShareConfig How Exp. Share All splits the experience between the party.
  * @property pokeBallOverrides Map of specific custom Poké Ball path identifiers to custom capture rate configurations.
  * @property customBallsEnabled Toggles the custom Poké Balls: their recipes, loot, the native recipes that craft them, the
  * creative tab replacement and the `pokeball=` aliases. Recipe changes apply on the next datapack reload.
  * @property berryMechanicsEnabled Toggles the berry growth times, yields, Hoe Fortune bonus and mulch uses.
  * @property dynamicFollowSpeedEnabled Toggles the size-based follow distance and catch-up speed of sent out party Pokémon.
+ * @property expShareAllEnabled Toggles Exp. Share All, giving experience to the whole party when one member earns it.
  * @property levelCapEnabled Toggles the tier level caps on player-owned Pokémon.
  * @property tierCount Amount of progression tiers, from 1 to 20.
  * @property maxTierCaptureCount Caught species needed to reach the last tier, from 50 to 1025.
  * @property spawnCapEnabled Toggles the tier spawn cap on natural spawns.
  * @property tierSpeciesSurplus Extra spawnable species each tier must offer beyond what the next tier needs, as a fraction
- * of it, from 0 to 2. Ex: 0.25 = a tier leading to one that needs 100 species must have at least 125 spawnable species.
+ * of it, from 0 to 2, 0.4 by default. Ex: 0.4 = a tier leading to one that needs 100 species must have at least 140
+ * spawnable species.
  * @property tierSpawnLevelsEnabled Toggles natural spawn levels following the level cap of the player's tier.
  * @property averageSpawnLevelStart Where the most common spawn levels start, as a fraction of the way from the tier's
  * minimum spawn level to its level cap, from 0 to 1.
  * @property averageSpawnLevelEnd Where the most common spawn levels end, in the same scale, from 0 to 1.
  * @property averageSpawnLevelChance Minimum share of natural spawns rolling a level from the most common range, from 0 to 1.
  * @property spawnGroups Map of [SpawnGroup] identifiers to their spawn rules.
+ * @property playerSharedTieringEnabled Toggles player-shared tiering, counting the species caught by every player together
+ * to unlock tiers.
+ * @property tierShareBlocklist Names of players left out of the shared tiers, who progress with their own captures only.
+ * @property caracatronScreenColor Screen color of the Caracatron 3000, the name of a color folder in
+ * `assets/caraca_customs/textures/gui/caracatron/colors/`. A visual preference of each player, so the server's value never
+ * replaces the client's own.
+ * @property caracatronScanSpeed How many times faster the Caracatron 3000 scans Pokémon than a Pokédex, from 1 to 5.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -135,20 +170,31 @@ data class ConfigData(
         defaultCaptureRate = 6.7f,
         boostedCaptureRate = 6.7f
     ),
+    val defaultExpShareConfig: ExpShareConfigEntry = ExpShareConfigEntry(
+        expDivisionMethod = ExpDivisionMethod.MULTIPLIED,
+        expShareMethod = ExpShareMethod.EQUALLY,
+        expShareMultiplier = 0.5f,
+        expShareItemBonus = 0.5f
+    ),
     val pokeBallOverrides: MutableMap<String, PokeBallConfigEntry> = linkedMapOf(),
     var customBallsEnabled: Boolean = true,
     var berryMechanicsEnabled: Boolean = true,
     var dynamicFollowSpeedEnabled: Boolean = true,
+    var expShareAllEnabled: Boolean = true,
     var levelCapEnabled: Boolean = true,
     var tierCount: Int = 6,
     var maxTierCaptureCount: Int = 512,
     var spawnCapEnabled: Boolean = true,
-    var tierSpeciesSurplus: Float = 0.25f,
+    var tierSpeciesSurplus: Float = 0.4f,
     var tierSpawnLevelsEnabled: Boolean = true,
     var averageSpawnLevelStart: Float = 0.4f,
     var averageSpawnLevelEnd: Float = 0.8f,
     var averageSpawnLevelChance: Float = 0.65f,
-    val spawnGroups: MutableMap<String, SpawnGroupConfigEntry> = linkedMapOf()
+    val spawnGroups: MutableMap<String, SpawnGroupConfigEntry> = linkedMapOf(),
+    var playerSharedTieringEnabled: Boolean = false,
+    var tierShareBlocklist: MutableList<String> = mutableListOf(),
+    var caracatronScreenColor: String = DynamicConfig.DEFAULT_CARACATRON_COLOR,
+    var caracatronScanSpeed: Int = 2
 )
 
 /**
@@ -190,6 +236,11 @@ object DynamicConfig {
     const val MAX_TIER_CAPTURE_COUNT = 1025
 
     /**
+     * Highest value of [ExpShareConfigEntry.expShareItemBonus].
+     */
+    const val MAX_EXP_SHARE_ITEM_BONUS = 100.0f
+
+    /**
      * Bounds of the [SpawnGroupConfigEntry] fields.
      */
     const val MIN_SPAWN_RATE_MULTIPLIER = 0.01f
@@ -203,6 +254,22 @@ object DynamicConfig {
      * Bounds of [ConfigData.tierSpeciesSurplus].
      */
     const val MAX_TIER_SPECIES_SURPLUS = 2.0f
+
+    /**
+     * Default value of [ConfigData.caracatronScreenColor].
+     */
+    const val DEFAULT_CARACATRON_COLOR = "cerulean"
+
+    /**
+     * Caracatron screen colors whose folder was renamed, by old name. The blue screen became Cerulean in 1.25.3.
+     */
+    private val RENAMED_CARACATRON_COLORS = mapOf("blue" to "cerulean")
+
+    /**
+     * Bounds of [ConfigData.caracatronScanSpeed].
+     */
+    const val MIN_CARACATRON_SCAN_SPEED = 1
+    const val MAX_CARACATRON_SCAN_SPEED = 5
 
     private val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
     private val NETWORK_GSON: Gson = Gson()
@@ -270,6 +337,23 @@ object DynamicConfig {
         runCatching {
             FileWriter(CONFIG_FILE).use { writer ->
                 GSON.toJson(data, writer)
+            }
+        }
+    }
+
+    /**
+     * Changes the Caracatron screen color and writes it to the config file without touching any other value in it, so a
+     * client connected to a server never saves the server's settings as its own.
+     *
+     * @param color Name of the color folder.
+     */
+    fun saveCaracatronScreenColor(color: String) {
+        data.caracatronScreenColor = sanitizeCaracatronColor(color)
+        val local = runCatching { FileReader(CONFIG_FILE).use { GSON.fromJson(it, ConfigData::class.java) } }.getOrNull() ?: return
+        local.caracatronScreenColor = data.caracatronScreenColor
+        runCatching {
+            FileWriter(CONFIG_FILE).use { writer ->
+                GSON.toJson(local, writer)
             }
         }
     }
@@ -388,6 +472,39 @@ object DynamicConfig {
         data.pokeBallOverrides.values.forEach { entry ->
             sanitizeUnitaryPokeBallOverride(entry)
         }
+
+        sanitizeExpShareConfig(data.defaultExpShareConfig)
+        data.caracatronScreenColor = sanitizeCaracatronColor(data.caracatronScreenColor as String?)
+        data.caracatronScanSpeed = data.caracatronScanSpeed.coerceIn(MIN_CARACATRON_SCAN_SPEED, MAX_CARACATRON_SCAN_SPEED)
+        data.tierShareBlocklist = (data.tierShareBlocklist as MutableList<String>?).orEmpty()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinctBy { it.lowercase() }
+            .toMutableList()
+    }
+
+    /**
+     * Restores enum values Gson left as `null` after a typo in the file, keeps the multiplier between 0 and 1 and the
+     * Exp. Share bonus between 0 and [MAX_EXP_SHARE_ITEM_BONUS], both with two decimals.
+     *
+     * @param entry Target Exp. Share All configuration entry.
+     */
+    /**
+     * Turns a stored screen color into a valid folder name, lowercase (older files kept `BLUE`), falling back to
+     * [DEFAULT_CARACATRON_COLOR] when it's missing or can't be a folder name. Colors renamed since then are moved to
+     * their new folder ([RENAMED_CARACATRON_COLORS]).
+     */
+    private fun sanitizeCaracatronColor(color: String?): String {
+        val folder = color?.trim()?.lowercase().orEmpty()
+        if (folder.isEmpty() || '/' in folder || !ResourceLocation.isValidPath(folder)) return DEFAULT_CARACATRON_COLOR
+        return RENAMED_CARACATRON_COLORS[folder] ?: folder
+    }
+
+    private fun sanitizeExpShareConfig(entry: ExpShareConfigEntry) {
+        if ((entry.expDivisionMethod as ExpDivisionMethod?) == null) entry.expDivisionMethod = ExpDivisionMethod.MULTIPLIED
+        if ((entry.expShareMethod as ExpShareMethod?) == null) entry.expShareMethod = ExpShareMethod.EQUALLY
+        entry.expShareMultiplier = (entry.expShareMultiplier.coerceIn(0.0f, 1.0f) * 100).roundToInt() / 100.0f
+        entry.expShareItemBonus = (entry.expShareItemBonus.coerceIn(0.0f, MAX_EXP_SHARE_ITEM_BONUS) * 100).roundToInt() / 100.0f
     }
 
     /**
@@ -524,12 +641,14 @@ object DynamicConfig {
      * Overwrites the active in-memory configuration with data provided by the server.
      *
      * Parses the incoming JSON payload and instantly applies bounds validation
-     * to ensure structural integrity before replacing the client's local data.
+     * to ensure structural integrity before replacing the client's local data. The client keeps its own
+     * [ConfigData.caracatronScreenColor], since it's a visual preference.
      *
      * @param json Valid JSON string received from the dedicated server's payload.
      */
     fun loadFromJsonString(json: String) {
         val serverData = runCatching { GSON.fromJson(json, ConfigData::class.java) }.getOrNull() ?: return
+        serverData.caracatronScreenColor = data.caracatronScreenColor
         data = serverData
         SpawnTierTable.invalidate()
         sanitizeAndValidateEntries()

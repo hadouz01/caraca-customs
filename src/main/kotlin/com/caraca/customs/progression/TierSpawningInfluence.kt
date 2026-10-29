@@ -11,11 +11,12 @@ import com.cobblemon.mod.common.api.spawning.influence.SpawningInfluence
 import com.cobblemon.mod.common.api.spawning.position.SpawnablePosition
 import com.cobblemon.mod.common.api.spawning.spawner.FishingSpawnerFactory
 import com.cobblemon.mod.common.api.spawning.spawner.PlayerSpawnerFactory
+import com.cobblemon.mod.common.api.spawning.spawner.PokeSnackSpawnerFactory
 import java.util.UUID
 import kotlin.random.Random
 
 /**
- * Applies the tier spawn cap to the natural spawns around a player, fishing included.
+ * Applies the tier spawn cap to the natural spawns around a player, fishing and placed Poké Snacks included.
  *
  * Pokémon whose species belongs to a [SpawnGroup] get their spawn weight multiplied by
  * [SpawnTierTable.multiplierAt] for the player's tier, and can't spawn at all when it's `0`. Species in no group,
@@ -27,15 +28,22 @@ import kotlin.random.Random
  * another member of the same herd when its own species is blocked, or with a chance that matches how much rarer it is
  * than the herd's most common allowed member.
  *
- * It also sets the level of every natural Pokémon spawn around the player through [TierSpawnLevels], replacing
+ * It also sets the level of every natural Pokémon spawn (snacks included) through [TierSpawnLevels], replacing
  * Cobblemon's own level range, while [Feature.SPAWN_LEVELS] is enabled.
  *
- * @property playerId UUID of the player the spawns happen around.
+ * @property tier Gives the tier the spawns are capped by and roll their levels from, asked again on every check.
  *
  * @author hadouz01
  * @since 1.5.0
  */
-class TierSpawningInfluence(private val playerId: UUID) : SpawningInfluence {
+class TierSpawningInfluence(private val tier: () -> Int) : SpawningInfluence {
+
+    /**
+     * Caps the spawns around a player by their own tier.
+     *
+     * @param playerId UUID of the player the spawns happen around.
+     */
+    constructor(playerId: UUID) : this({ PlayerTiers.cachedTier(playerId) })
 
     override fun affectSpawnable(detail: SpawnDetail, spawnablePosition: SpawnablePosition): Boolean {
         val multiplier = multiplierFor(detail) ?: return true
@@ -51,7 +59,7 @@ class TierSpawningInfluence(private val playerId: UUID) : SpawningInfluence {
         val spawn = action as? PokemonSpawnAction ?: return
         if (Feature.SPAWN_CAP.isEnabled) swapHerdMember(spawn)
         if (Feature.SPAWN_LEVELS.isEnabled) {
-            val level = TierSpawnLevels.rollLevel(PlayerTiers.cachedTier(playerId))
+            val level = TierSpawnLevels.rollLevel(tier())
             spawn.levelRange = level..level
         }
     }
@@ -100,7 +108,7 @@ class TierSpawningInfluence(private val playerId: UUID) : SpawningInfluence {
     private fun speciesMultiplier(species: String?): Float? {
         val speciesId = species?.let(SpawnGroupRegistry::parseSpecies) ?: return null
         val group = SpawnGroupRegistry.groupOf(speciesId) ?: return null
-        return SpawnTierTable.multiplierAt(group, PlayerTiers.cachedTier(playerId))
+        return SpawnTierTable.multiplierAt(group, tier())
     }
 
     private fun <T> List<T>.weightedPick(weight: (T) -> Float): T? {
@@ -117,11 +125,15 @@ class TierSpawningInfluence(private val playerId: UUID) : SpawningInfluence {
     companion object {
 
         /**
-         * Adds this influence to every new player spawner and fishing cast.
+         * Adds this influence to every new player spawner, fishing cast and placed Poké Snack. Snacks are capped by
+         * [SnackSpawnTier].
          */
         fun register() {
             PlayerSpawnerFactory.influenceBuilders.add { player -> TierSpawningInfluence(player.uuid) }
             FishingSpawnerFactory.positionInfluenceBuilders.add { context -> listOf(TierSpawningInfluence(context.player.uuid)) }
+            PokeSnackSpawnerFactory.influenceBuilders.add { context ->
+                TierSpawningInfluence(SnackSpawnTier(context.world, context.pos)::current)
+            }
         }
     }
 }

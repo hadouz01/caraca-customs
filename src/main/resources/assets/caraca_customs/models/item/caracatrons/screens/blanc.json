@@ -1,0 +1,6 @@
+{
+  "parent": "caraca_customs:item/caracatron_3000_model",
+  "textures": {
+    "screen": "caraca_customs:item/caracatrons/models/caracatron_screen_white"
+  }
+}

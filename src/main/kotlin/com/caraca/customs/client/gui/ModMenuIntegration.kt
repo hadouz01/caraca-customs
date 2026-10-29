@@ -2,12 +2,15 @@ package com.caraca.customs.client.gui
 
 import com.caraca.customs.balls.CustomBallRegistry
 import com.caraca.customs.berry.BerryGrowthModifier
+import com.caraca.customs.client.gui.caracatron.CaracatronColors
 import com.caraca.customs.config.BerryConfigEntry
 import com.caraca.customs.config.ConfigData
 import com.caraca.customs.config.DynamicConfig
 import com.caraca.customs.config.FeatureToggles
 import com.caraca.customs.config.PokeBallConfigEntry
 import com.caraca.customs.config.SpawnGroupConfigEntry
+import com.caraca.customs.constants.ExpDivisionMethod
+import com.caraca.customs.constants.ExpShareMethod
 import com.caraca.customs.progression.LevelCapHandler
 import com.caraca.customs.progression.SpawnGroup
 import com.terraformersmc.modmenu.api.ConfigScreenFactory
@@ -79,8 +82,8 @@ class ModMenuIntegration : ModMenuApi {
         }
 
         /**
-         * Appends the mechanic toggles, the Hoe Fortune chance, the global default berry drawer and the
-         * default Poké Ball category drawers to the General tab.
+         * Appends the mechanic toggles, the Caracatron screen color and scan speed, the Hoe Fortune chance, the global default berry drawer
+         * and the default Poké Ball category drawers to the General tab.
          */
         private fun appendGeneralSettings(category: ConfigCategory, entryBuilder: ConfigEntryBuilder) {
             val data = DynamicConfig.data
@@ -98,6 +101,36 @@ class ModMenuIntegration : ModMenuApi {
             category.addEntry(toggle("spawn_cap_enabled", data.spawnCapEnabled, DEFAULTS.spawnCapEnabled) { data.spawnCapEnabled = it })
             category.addEntry(toggle("spawn_levels_enabled", data.tierSpawnLevelsEnabled, DEFAULTS.tierSpawnLevelsEnabled) { data.tierSpawnLevelsEnabled = it })
             category.addEntry(toggle("follow_speed_enabled", data.dynamicFollowSpeedEnabled, DEFAULTS.dynamicFollowSpeedEnabled) { data.dynamicFollowSpeedEnabled = it })
+            category.addEntry(toggle("exp_share_all_enabled", data.expShareAllEnabled, DEFAULTS.expShareAllEnabled) { data.expShareAllEnabled = it })
+            category.addEntry(toggle("player_shared_tiering_enabled", data.playerSharedTieringEnabled, DEFAULTS.playerSharedTieringEnabled) { data.playerSharedTieringEnabled = it })
+
+            val caracatronColors = CaracatronColors.available().ifEmpty { listOf(DynamicConfig.DEFAULT_CARACATRON_COLOR) }
+            category.addEntry(
+                entryBuilder.startSelector(
+                    Component.translatable("option.caraca_customs.caracatron_color"),
+                    caracatronColors.toTypedArray(),
+                    CaracatronColors.current(caracatronColors)
+                )
+                    .setDefaultValue(DEFAULTS.caracatronScreenColor)
+                    .setNameProvider(CaracatronColors::displayName)
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.caracatron_color"))
+                    .setSaveConsumer { data.caracatronScreenColor = it }
+                    .build()
+            )
+
+            category.addEntry(
+                entryBuilder.startIntSlider(
+                    Component.translatable("option.caraca_customs.caracatron_scan_speed"),
+                    data.caracatronScanSpeed,
+                    DynamicConfig.MIN_CARACATRON_SCAN_SPEED,
+                    DynamicConfig.MAX_CARACATRON_SCAN_SPEED
+                )
+                    .setDefaultValue(DEFAULTS.caracatronScanSpeed)
+                    .setTextGetter { Component.literal("${it}x") }
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.caracatron_scan_speed"))
+                    .setSaveConsumer { data.caracatronScanSpeed = it }
+                    .build()
+            )
 
             category.addEntry(
                 entryBuilder.startFloatField(
@@ -122,7 +155,8 @@ class ModMenuIntegration : ModMenuApi {
         }
 
         /**
-         * Appends the tier count, the max capture count and the spawn level options to the Progression tab.
+         * Appends the tier count, the max capture count, the tier-share blocklist, the spawn level options and the
+         * Exp. Share All drawer to the Progression tab.
          */
         private fun appendProgressionSettings(category: ConfigCategory, entryBuilder: ConfigEntryBuilder) {
             val data = DynamicConfig.data
@@ -153,6 +187,17 @@ class ModMenuIntegration : ModMenuApi {
                     .build()
             )
 
+            category.addEntry(
+                entryBuilder.startStrList(
+                    Component.translatable("option.caraca_customs.tier_share_blocklist"),
+                    data.tierShareBlocklist
+                )
+                    .setDefaultValue(DEFAULTS.tierShareBlocklist)
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.tier_share_blocklist"))
+                    .setSaveConsumer { data.tierShareBlocklist = it.toMutableList() }
+                    .build()
+            )
+
             fun fraction(key: String, value: Float, reset: Float, save: (Float) -> Unit) =
                 entryBuilder.startFloatField(Component.translatable("option.caraca_customs.$key"), value)
                     .setDefaultValue(reset)
@@ -165,6 +210,54 @@ class ModMenuIntegration : ModMenuApi {
             category.addEntry(fraction("average_spawn_level_start", data.averageSpawnLevelStart, DEFAULTS.averageSpawnLevelStart) { data.averageSpawnLevelStart = it })
             category.addEntry(fraction("average_spawn_level_end", data.averageSpawnLevelEnd, DEFAULTS.averageSpawnLevelEnd) { data.averageSpawnLevelEnd = it })
             category.addEntry(fraction("average_spawn_level_chance", data.averageSpawnLevelChance, DEFAULTS.averageSpawnLevelChance) { data.averageSpawnLevelChance = it })
+
+            val expShare = data.defaultExpShareConfig
+            val expShareDefaults = DEFAULTS.defaultExpShareConfig
+            val expShareDrawer = entryBuilder.startSubCategory(Component.translatable("option.caraca_customs.exp_share_all_title"))
+
+            expShareDrawer.add(
+                entryBuilder.startEnumSelector(
+                    Component.translatable("option.caraca_customs.exp_division"),
+                    ExpDivisionMethod::class.java,
+                    expShare.expDivisionMethod
+                )
+                    .setDefaultValue(expShareDefaults.expDivisionMethod)
+                    .setEnumNameProvider { Component.translatable("option.caraca_customs.exp_division.${it.name.lowercase()}") }
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.exp_division"))
+                    .setSaveConsumer { expShare.expDivisionMethod = it }
+                    .build()
+            )
+
+            expShareDrawer.add(
+                entryBuilder.startEnumSelector(
+                    Component.translatable("option.caraca_customs.exp_share_method"),
+                    ExpShareMethod::class.java,
+                    expShare.expShareMethod
+                )
+                    .setDefaultValue(expShareDefaults.expShareMethod)
+                    .setEnumNameProvider { Component.translatable("option.caraca_customs.exp_share_method.${it.name.lowercase()}") }
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.exp_share_method"))
+                    .setSaveConsumer { expShare.expShareMethod = it }
+                    .build()
+            )
+
+            expShareDrawer.add(
+                fraction("exp_share_multiplier", expShare.expShareMultiplier, expShareDefaults.expShareMultiplier) {
+                    expShare.expShareMultiplier = it
+                }
+            )
+
+            expShareDrawer.add(
+                entryBuilder.startFloatField(Component.translatable("option.caraca_customs.exp_share_item_bonus"), expShare.expShareItemBonus)
+                    .setDefaultValue(expShareDefaults.expShareItemBonus)
+                    .setMin(0.0f)
+                    .setMax(DynamicConfig.MAX_EXP_SHARE_ITEM_BONUS)
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.exp_share_item_bonus"))
+                    .setSaveConsumer { expShare.expShareItemBonus = it }
+                    .build()
+            )
+
+            category.addEntry(expShareDrawer.build())
         }
 
         /**

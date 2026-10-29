@@ -100,6 +100,25 @@ tasks.jar {
 	}
 }
 
+/**
+ * Copies the remapped jar to `build/libs/<archives name>.jar`, with no version in the name, replacing the last copy, so
+ * players can swap the mod without deleting the previous version first.
+ */
+val unversionedJar by tasks.registering(Copy::class) {
+	val archivesName = base.archivesName
+	from(tasks.remapJar.flatMap { it.archiveFile })
+	into(layout.buildDirectory.dir("libs"))
+	rename { "${archivesName.get()}.jar" }
+}
+
+tasks.remapJar {
+	finalizedBy(unversionedJar)
+}
+
+tasks.build {
+	dependsOn(unversionedJar)
+}
+
 publishing {
 	publications {
 		register<MavenPublication>("mavenJava") {

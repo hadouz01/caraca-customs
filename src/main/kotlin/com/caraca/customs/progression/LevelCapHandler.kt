@@ -22,20 +22,30 @@ import net.minecraft.server.level.ServerPlayer
  * and blocked entirely once it gets there. Experience given by commands (e.g. `/levelup`) ignores the cap, and setting
  * the level directly (e.g. `/pokeedit`) never goes through experience at all.
  *
+ * Every new species registered as caught is also recorded in the [SharedPokedex]. When it grows the shared pool, every
+ * online player who shares tiers is refreshed and told who registered it.
+ *
  * @author hadouz01
  * @since 1.4.0
  */
 object LevelCapHandler {
 
     /**
-     * Subscribes to Cobblemon's experience and Pokédex events and tracks online players' tiers.
+     * Subscribes to Cobblemon's experience and Pokédex events and tracks online players' tiers. Joining players also
+     * contribute the species they already own to the [SharedPokedex].
      */
     fun register() {
         CobblemonEvents.EXPERIENCE_GAINED_EVENT_PRE.subscribe(Priority.LOW, ::onExperienceGained)
         CobblemonEvents.POKEDEX_DATA_CHANGED_POST.subscribe(Priority.NORMAL, ::onPokedexChanged)
 
-        ServerPlayConnectionEvents.JOIN.register { handler, _, _ ->
-            PlayerTiers.refreshTier(handler.player.uuid)
+        ServerPlayConnectionEvents.JOIN.register { handler, _, server ->
+            val player = handler.player
+            SharedPokedex.refreshBlocklist()
+            val addedToPool = SharedPokedex.backfill(player.uuid)
+            PlayerTiers.refreshTier(player.uuid)
+            if (addedToPool && PlayerTiers.sharesTier(player.uuid)) {
+                refreshSharedTiers(server, player.name)
+            }
         }
         ServerPlayConnectionEvents.DISCONNECT.register { handler, _ ->
             PlayerTiers.forgetTier(handler.player.uuid)
@@ -48,6 +58,7 @@ object LevelCapHandler {
      * @param server The running server instance.
      */
     fun refreshTiers(server: MinecraftServer) {
+        SharedPokedex.refreshBlocklist()
         server.playerList.players.forEach { player ->
             PlayerTiers.refreshTier(player.uuid)
         }
@@ -83,12 +94,37 @@ object LevelCapHandler {
     private fun onPokedexChanged(event: PokedexDataChangedEvent.Post) {
         if (event.knowledge != PokedexEntryProgress.OWNED) return
 
+        val speciesId = event.dataSource.pokemon.species.resourceIdentifier
+        val addedToPool = SharedPokedex.contribute(event.playerUUID, speciesId)
+        val catcher = event.playerUUID.getPlayer()
+
+        if (addedToPool && catcher != null && PlayerTiers.sharesTier(catcher.uuid)) {
+            refreshSharedTiers(catcher.server, catcher.name)
+            return
+        }
+
         val info = PlayerTiers.infoFor(event.playerUUID)
         val previousTier = PlayerTiers.refreshTier(event.playerUUID) ?: return
         if (info.tier <= previousTier) return
 
-        val player = event.playerUUID.getPlayer() ?: return
-        notifyTierUp(player, info)
+        catcher?.let { notifyTierUp(it, info) }
+    }
+
+    /**
+     * Recomputes the tiers of every online player who shares tiers after the shared pool grew, telling each one who went
+     * up who registered the new species.
+     *
+     * @param server The running server instance.
+     * @param catcherName Name of the player who registered the species.
+     */
+    private fun refreshSharedTiers(server: MinecraftServer, catcherName: Component) {
+        server.playerList.players
+            .filter { PlayerTiers.sharesTier(it.uuid) }
+            .forEach { player ->
+                val previousTier = PlayerTiers.refreshTier(player.uuid) ?: return@forEach
+                val info = PlayerTiers.infoFor(player.uuid)
+                if (info.tier > previousTier) notifySharedTierUp(player, catcherName, info)
+            }
     }
 
     /**
@@ -112,6 +148,15 @@ object LevelCapHandler {
             Component.translatable("text.caraca_customs.tier.up", info.tier, info.tierCount, info.levelCap)
         } else {
             Component.translatable("text.caraca_customs.tier.up_no_cap", info.tier, info.tierCount)
+        }
+        player.sendSystemMessage(message.withStyle(ChatFormatting.GREEN))
+    }
+
+    private fun notifySharedTierUp(player: ServerPlayer, catcherName: Component, info: TierInfo) {
+        val message = if (DynamicConfig.data.levelCapEnabled) {
+            Component.translatable("text.caraca_customs.tier.up_shared", catcherName, info.tier, info.tierCount, info.levelCap)
+        } else {
+            Component.translatable("text.caraca_customs.tier.up_shared_no_cap", catcherName, info.tier, info.tierCount)
         }
         player.sendSystemMessage(message.withStyle(ChatFormatting.GREEN))
     }
