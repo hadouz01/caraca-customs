@@ -8,10 +8,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 
 /**
- * Utility registry managing the activation of internal built-in resource and data packs.
- *
- * Facilitates the programmatic registration of embedded datapacks to ensure custom data overrides
- * (such as recipes and loot tables) take precedence over base mod data packs like Cobblemon.
+ * Registers the mod's built-in packs, so its recipes and loot tables win over Cobblemon's.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -19,10 +16,7 @@ import net.minecraft.resources.ResourceLocation
 object BuiltinPackRegistry {
 
     /**
-     * Registers all embedded datapacks into Fabric's resource manager hierarchy.
-     *
-     * Automatically enables the packs on world loading with elevated priority over standard mod resources.
-     * Keeps the cognitive complexity low by delegating the registration logic to a dedicated helper function.
+     * Registers the recipe and loot packs, always on and above the other mods' data.
      */
     fun register() {
         registerPack("caraca_recipe_overrides", "Caraca Customs Recipes")
@@ -30,14 +24,10 @@ object BuiltinPackRegistry {
     }
 
     /**
-     * Helper method to register a specific built-in data pack.
+     * Registers one of the mod's built-in packs, turned on by default.
      *
-     * This method resolves the ModContainer from Fabric API and securely injects the
-     * targeted datapack into the game's registry, forcing it to be enabled by default
-     * without requiring player intervention in the UI.
-     *
-     * @param packPath The exact directory name of the pack inside `resources/resourcepacks/`.
-     * @param displayName The human-readable name displayed in the game's datapack menu.
+     * @param packPath Folder of the pack inside `resources/resourcepacks/`.
+     * @param displayName Name shown in the datapack list.
      */
     private fun registerPack(packPath: String, displayName: String) {
         val packId = ResourceLocation.fromNamespaceAndPath(CaracaCustoms.MOD_ID, packPath)

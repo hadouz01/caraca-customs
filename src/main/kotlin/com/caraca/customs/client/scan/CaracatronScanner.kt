@@ -14,15 +14,11 @@ import net.minecraft.world.entity.player.Player
 import kotlin.math.min
 
 /**
- * Runs Cobblemon's Pokédex scanner for the Caracatron 3000.
+ * Runs Cobblemon's Pokédex scanner for the Caracatron, like a red Pokédex but faster.
  *
- * The scanner (overlay, zoom, focus and registering scanned Pokémon) is Cobblemon's own `PokedexUsageContext`, driven
- * like a red Pokédex, only faster by the configured scan speed. Cobblemon only lets Pokédex items through some of its
- * checks, so a few mixins treat a Caracatron in use as one: `PlayerExtensionsMixin` (the HUD and party keybinds),
- * `PokedexUsageContextMixin` (scan speed) and `CaracatronItemInHandRendererMixin` (hiding the hand while scanning), plus
- * the `cobblemon:pokedex` item tag, which keeps Cobblemon from closing the scanner every tick. On the server,
- * `FinishScanningHandlerMixin` lowers the ticks a scan needs by the same speed. A quick click opens the Caracatron screen
- * instead of Cobblemon's Pokédex, so the scanner is reset without going through `stopUsing`.
+ * Cobblemon only lets Pokédex items through some checks, so `PlayerExtensionsMixin`, `PokedexUsageContextMixin`,
+ * `CaracatronItemInHandRendererMixin` and the `cobblemon:pokedex` tag treat a Caracatron in use as one. A quick click
+ * opens the Caracatron instead, so the scanner is reset without going through `stopUsing`.
  *
  * @author hadouz01
  * @since 1.20.0

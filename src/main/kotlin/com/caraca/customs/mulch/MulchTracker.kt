@@ -1,10 +1,8 @@
 package com.caraca.customs.mulch
 
 /**
- * Interface contract injected into Cobblemon's `BerryBlockEntity`, limiting any applied mulch
- * to [MULCH_HARVEST_USES] yield cycles.
- *
- * The active mulch itself is read from Cobblemon's native `BerryBlockEntity.mulchVariant`.
+ * Mulch use counter added to Cobblemon's `BerryBlockEntity`, so any mulch lasts [MULCH_HARVEST_USES] yield cycles. The
+ * mulch itself is still Cobblemon's `mulchVariant`.
  *
  * @author hadouz01
  * @since 1.0.0

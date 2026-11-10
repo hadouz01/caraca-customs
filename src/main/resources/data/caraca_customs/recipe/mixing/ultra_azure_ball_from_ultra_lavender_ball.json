@@ -1,0 +1,17 @@
+{
+    "fabric:load_conditions": [
+        { "condition": "caraca_customs:feature_enabled", "feature": "custom_balls" }
+    ],
+    "type": "minecraft:crafting_shapeless",
+    "category": "equipment",
+    "group": "caraca_ultra_balls",
+    "ingredients": [
+        { "item": "caraca_customs:ultra_lavender_ball" },
+        { "item": "cobblemon:blue_apricorn" },
+        { "item": "cobblemon:blue_apricorn" }
+    ],
+    "result": {
+        "count": 1,
+        "id": "caraca_customs:ultra_azure_ball"
+    }
+}

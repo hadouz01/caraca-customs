@@ -8,8 +8,7 @@ import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerPlayer
 
 /**
- * Server-side network manager responsible for registering packet types
- * and dispatching configuration payloads to players.
+ * Server side of the mod's packets: registers them and sends the config to players.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -35,7 +34,7 @@ object ServerNetworkHandler {
     /**
      * Sends the active configuration to every connected player, used after a hot reload.
      *
-     * @param server The running server instance.
+     * @param server Running server.
      */
     fun broadcastConfig(server: MinecraftServer) {
         val payload = createPayload()

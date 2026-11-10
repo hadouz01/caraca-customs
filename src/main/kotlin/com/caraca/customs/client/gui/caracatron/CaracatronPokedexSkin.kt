@@ -13,25 +13,14 @@ import net.minecraft.resources.ResourceLocation
 import net.minecraft.util.FormattedCharSequence
 
 /**
- * Dresses Cobblemon's Pokédex in the Caracatron's screen color while it's the Caracatron's Pokédex page.
+ * Dresses Cobblemon's Pokédex in the Caracatron's screen color on the Pokédex page, between [begin] and [end].
  *
- * Between [begin] and [end] (the framed Pokédex's `render`), every Pokédex texture bound through
- * `RenderSystem.setShaderTexture` and every text drawn through `GuiGraphics.drawString` passes through here:
+ * Pokédex textures use, in this order: the color's own `colors/<color>/pokedex/<name>.png`, the matching Caracatron part
+ * ([SHARED_PARTS]), a copy recolored with [CaracatronPalette], or Cobblemon's own. Only a few are worked out per frame
+ * ([MAX_PICKS_PER_FRAME]), so the page can show some blue for a split second.
  *
- * - **Textures** (`cobblemon:textures/gui/pokedex/<name>.png`), first match wins:
- *   1. the color's own art, `caraca_customs:textures/gui/caracatron/colors/<color>/pokedex/<name>.png`, so any texture
- *      can be redrawn by hand (resource packs included);
- *   2. the Caracatron part sharing its layout ([SHARED_PARTS]): the screen, its bars, scroll track and type bars;
- *   3. a recolored copy made in game with the color's [CaracatronPalette], kept as a dynamic texture;
- *   4. Cobblemon's own texture, when nothing in it is close to the Pokédex's cyan.
- * - **Texts:** white texts take the color's screen text color ([CaracatronTextColors.screen]), with a white shadow
- *   under dark text like on the Caracatron; the Pokédex's gray panel text (`#606B6E`) turns white on dark panels (Noir),
- *   and its cyan accent texts follow the palette.
- *
- * Textures are worked out a few per frame ([MAX_PICKS_PER_FRAME]) and cached per color, so the first frames of the page
- * may still show some of Cobblemon's blue pieces.
- *
- * Any other screen, and a Pokédex opened from a Pokédex item, is left untouched.
+ * White texts take the screen text color (with a white shadow when it's dark), the panel's gray turns white on Noir (except in
+ * the scroll text box) and the blue accents follow the palette.
  *
  * @author hadouz01
  * @since 1.29.0
@@ -64,6 +53,7 @@ object CaracatronPokedexSkin {
 
     private var folder: String? = null
     private var drawingText = false
+    private var keepingPanelText = false
     private var picksThisFrame = 0
 
     private val textures = HashMap<String, ResourceLocation>()
@@ -87,6 +77,17 @@ object CaracatronPokedexSkin {
     @JvmStatic
     fun end() {
         folder = null
+    }
+
+    /**
+     * Keeps the Pokédex's gray panel text as it is while its scroll text box (description, abilities, moves) draws,
+     * since that box stays light on every screen color.
+     *
+     * @param keep Whether the scroll text box is drawing.
+     */
+    @JvmStatic
+    fun keepPanelText(keep: Boolean) {
+        keepingPanelText = keep
     }
 
     /**
@@ -120,7 +121,7 @@ object CaracatronPokedexSkin {
         val rgb = color and RGB
         val target = when (rgb) {
             RGB -> colors.screen
-            POKEDEX_TEXT -> if (colors.panel == CaracatronTextColors.LIGHT) CaracatronTextColors.LIGHT else rgb
+            POKEDEX_TEXT -> if (!keepingPanelText && colors.darkPanel) CaracatronTextColors.LIGHT else rgb
             else -> palette(folder).map(rgb)
         }
         val darkShadow = shadow && target == CaracatronTextColors.DARK

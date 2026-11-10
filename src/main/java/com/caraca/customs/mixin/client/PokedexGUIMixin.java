@@ -14,11 +14,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Turns Cobblemon's Pokédex into the Pokédex page of the Caracatron 3000 when it's opened from the Caracatron's page
- * navigation, through {@link CaracatronPages}: the Caracatron frame is drawn in place of the Pokédex's, the Pokédex is
- * dressed in the Caracatron's screen color while it renders ({@link CaracatronPokedexSkin}), and the page
- * navigation and the screen color select are drawn on top and take their clicks, scrolls and drags. Any other Pokédex
- * is left untouched.
+ * Turns Cobblemon's Pokédex into the Caracatron's Pokédex page when it's opened from the Caracatron: draws the
+ * Caracatron frame, dresses it in the screen color ({@link CaracatronPokedexSkin}) and puts the page navigation and
+ * color select on top ({@link CaracatronPages}). A Pokédex opened from the item is left alone.
  *
  * @author hadouz01
  * @since 1.25.0

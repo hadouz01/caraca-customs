@@ -7,6 +7,7 @@
 		"CaracatronItemRendererMixin",
 		"PlayerExtensionsMixin",
 		"PokedexGUIMixin",
+		"PokedexScrollTextMixin",
 		"PokedexTextMixin",
 		"PokedexTextureMixin",
 		"PokedexUsageContextMixin"

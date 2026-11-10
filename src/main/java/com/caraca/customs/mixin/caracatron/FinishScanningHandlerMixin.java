@@ -9,11 +9,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 /**
- * Mixin targeting Cobblemon's {@link FinishScanningHandler}, which only registers a scan after
- * {@code PokedexUsageContext.SUCCESS_SCAN_SERVER_TICKS} (15) ticks of scanning.
- * <p>
- * The Caracatron 3000 scans faster than a Pokédex, so its scans need fewer ticks, divided by the configured scan speed.
- * Without it, any speed above 2x would still wait for the 15 ticks on the server.
+ * Cobblemon only registers a scan after 15 ticks on the server ({@code SUCCESS_SCAN_SERVER_TICKS}). The Caracatron
+ * scans faster, so it needs fewer ticks, otherwise anything above 2x would still wait the full 15.
  *
  * @author hadouz01
  * @since 1.22.0

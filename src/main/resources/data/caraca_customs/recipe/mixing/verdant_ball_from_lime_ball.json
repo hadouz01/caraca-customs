@@ -1,0 +1,17 @@
+{
+    "fabric:load_conditions": [
+        { "condition": "caraca_customs:feature_enabled", "feature": "custom_balls" }
+    ],
+    "type": "minecraft:crafting_shapeless",
+    "category": "equipment",
+    "group": "basic_balls",
+    "ingredients": [
+        { "item": "caraca_customs:lime_ball" },
+        { "item": "cobblemon:green_apricorn" },
+        { "item": "cobblemon:green_apricorn" }
+    ],
+    "result": {
+        "count": 1,
+        "id": "caraca_customs:verdant_ball"
+    }
+}

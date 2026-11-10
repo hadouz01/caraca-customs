@@ -3,8 +3,7 @@ package com.caraca.customs.client.gui.caracatron
 import net.minecraft.network.chat.Component
 
 /**
- * Pages of the Caracatron 3000, in the order the page navigation goes through them. The navigation at the top of the
- * screen points to the page before and after the current one, going round, so the Caracatron page shows "< Guide" and
+ * Pages of the Caracatron, in navigation order. The navigation goes round, so the Caracatron page shows "< Guide" and
  * "Pokédex >".
  *
  * @property key Name of the page in `text.caraca_customs.caracatron.page.<key>`.

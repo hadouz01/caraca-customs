@@ -15,10 +15,10 @@ import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 
 /**
- * Central registry manager handling lifecycle initialization and registration for custom Poké Balls.
+ * Registers the custom Poké Balls.
  *
- * Cobblemon exposes no public Poké Ball registration API, so balls are inserted into the private
- * `PokeBalls.defaults` map and linked to their item through the internal `PokeBall.item` field.
+ * Cobblemon has no public API for it, so the balls go straight into the private `PokeBalls.defaults` map and get linked
+ * to their item through the internal `PokeBall.item` field.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -30,30 +30,28 @@ object CustomBallRegistry {
     private val ballsByItem = mutableMapOf<Item, ModularPokeBall>()
 
     /**
-     * Gets all registered modular Poké Balls, in registration order.
-     *
-     * @return Read-only list of custom Poké Balls.
+     * Every custom ball, in registration order.
      */
     fun getRegisteredBalls(): List<ModularPokeBall> = registeredBalls
 
     /**
-     * Looks up a custom Poké Ball by its path identifier.
+     * Finds a custom ball by its path.
      *
-     * @param nameId Item path string, case-insensitive.
-     * @return Matching [ModularPokeBall] instance, or `null` if absent.
+     * @param nameId Path of the ball, any case.
+     * @return The ball, or `null` when there's none.
      */
     fun getBallByName(nameId: String): ModularPokeBall? = ballsByName[nameId.lowercase()]
 
     /**
-     * Looks up a custom Poké Ball by its item.
+     * Finds the custom ball of an item.
      *
-     * @param item Target item.
-     * @return Matching [ModularPokeBall] instance, or `null` if the item is not a custom Poké Ball.
+     * @param item Item.
+     * @return The ball, or `null` when the item isn't a custom ball.
      */
     fun getBallByItem(item: Item): ModularPokeBall? = ballsByItem[item]
 
     /**
-     * Initializes all declared custom Poké Balls, registers item entries, and hooks into creative tabs.
+     * Registers every custom ball and its item, and adds them to the creative tab.
      */
     fun initialize() {
         @Suppress("UNCHECKED_CAST")

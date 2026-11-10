@@ -10,11 +10,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Client-side Mixin targeting {@link BallMultiplierCalculator} from the `catchrate-display` mod.
+ * Hooks catchrate-display's {@link BallMultiplierCalculator}.
  * <p>
- * Namespaced ids (e.g. {@code caraca_customs:fire_ball}) are already resolved through the public
- * {@code CatchRateBallRegistry} API registered by {@link CatchRateDisplayCompat}. The held-ball HUD, however,
- * only forwards the ball path (e.g. {@code poke_ball}), so this hook resolves bare ids against the mod's balls.
+ * Full ids like {@code caraca_customs:fire_ball} already go through {@code CatchRateBallRegistry}
+ * ({@link CatchRateDisplayCompat}), but the held ball HUD only sends the path ({@code poke_ball}), so this resolves
+ * bare ids to the mod's balls.
  *
  * @author hadouz01
  * @since 1.0.0

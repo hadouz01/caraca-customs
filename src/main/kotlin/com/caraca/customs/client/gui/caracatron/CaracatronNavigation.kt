@@ -7,16 +7,11 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 
 /**
- * Page navigation at the top of the Caracatron 3000, rectangles 29 to 32 of `exemplo_caracatron.png`: the page before the
- * current one on the left, after an arrow pointing left, and the page after it on the right, followed by an arrow
- * pointing right ([CaracatronPage]).
- *
- * While the mouse is over an option (its arrow or its name), the option sways back and forth in its arrow's direction,
- * one whole pixel at a time, for an 8-bit feel, over a translucent box in the text color that shows the whole click area.
- * Positions are relative to the Caracatron's top left corner.
+ * Page navigation at the top of the Caracatron: the previous page on the left and the next one on the right
+ * ([CaracatronPage]). Hovering an option sways it a pixel at a time, 8-bit style, over a box showing its click area.
  *
  * @param page Page being shown.
- * @param onNavigate Called with the page picked by a click.
+ * @param onNavigate Called with the page picked by a click or the mouse wheel.
  *
  * @author hadouz01
  * @since 1.25.0
@@ -75,9 +70,8 @@ class CaracatronNavigation(private val page: CaracatronPage, private val onNavig
      * @param originY Caracatron's top edge on screen.
      * @param mouseX Mouse x relative to the Caracatron.
      * @param mouseY Mouse y relative to the Caracatron.
-     * @param textColors Text colors of the page, for the page names and the hover box.
      */
-    fun render(context: GuiGraphics, originX: Int, originY: Int, mouseX: Double, mouseY: Double, textColors: CaracatronTextColors) {
+    fun render(context: GuiGraphics, originX: Int, originY: Int, mouseX: Double, mouseY: Double) {
         val font = Minecraft.getInstance().font
         val now = Util.getMillis()
         options.forEach { option ->
@@ -85,11 +79,11 @@ class CaracatronNavigation(private val page: CaracatronPage, private val onNavig
             option.hoverStart = start
             val offset = if (start == null) 0 else SWAY[((now - start) / SWAY_STEP_MILLIS % SWAY.size).toInt()] * option.direction
 
-            if (start != null) hoverBox(context, originX + option.areaX, originY + AREA_TOP, textColors.screen)
+            if (start != null) hoverBox(context, originX + option.areaX, originY + AREA_TOP)
 
             val label = option.target.label().copy()
             val textX = if (option.direction < 0) LEFT_TEXT_X.toDouble() else RIGHT_TEXT_RIGHT - font.width(label) * SCALE.toDouble()
-            textColors.drawScreenText(context, label, originX + textX + offset, originY + TEXT_Y, scale = SCALE)
+            CaracatronTextColors.drawHeaderText(context, label, originX + textX + offset, originY + TEXT_Y, scale = SCALE)
             val arrowX = if (option.direction < 0) LEFT_ARROW_CENTER_X else RIGHT_ARROW_CENTER_X
             arrow(context, originX + arrowX + offset, originY + ARROW_CENTER_Y, option.direction)
         }
@@ -114,6 +108,21 @@ class CaracatronNavigation(private val page: CaracatronPage, private val onNavig
      * @param mouseX Mouse x relative to the Caracatron.
      * @param mouseY Mouse y relative to the Caracatron.
      */
+    /**
+     * Goes to the page before or after the current one when the wheel turns over either option: up for the previous page,
+     * down for the next one.
+     *
+     * @param mouseX Mouse x relative to the Caracatron.
+     * @param mouseY Mouse y relative to the Caracatron.
+     * @param amount Wheel movement, positive going up.
+     * @return Whether the wheel was over an option.
+     */
+    fun mouseScrolled(mouseX: Double, mouseY: Double, amount: Double): Boolean {
+        if (amount == 0.0 || !isOver(mouseX, mouseY)) return false
+        onNavigate(if (amount > 0) page.previous else page.next)
+        return true
+    }
+
     fun isOver(mouseX: Double, mouseY: Double): Boolean = options.any { isOver(it, mouseX, mouseY) }
 
     private fun isOver(option: Option, mouseX: Double, mouseY: Double): Boolean {
@@ -121,15 +130,14 @@ class CaracatronNavigation(private val page: CaracatronPage, private val onNavig
     }
 
     /**
-     * Draws the box behind a hovered option, filling its whole click area with a translucent tint of the text color and
-     * outlining it a little stronger, so it reads as selected on light and dark screens alike.
+     * Draws the box behind a hovered option, filling its whole click area with a translucent white and
+     * outlining it a little stronger.
      *
      * @param x Left edge of the click area on screen.
      * @param y Top edge of the click area on screen.
-     * @param color RGB text color of the page.
      */
-    private fun hoverBox(context: GuiGraphics, x: Int, y: Int, color: Int) {
-        val rgb = color and 0xFFFFFF
+    private fun hoverBox(context: GuiGraphics, x: Int, y: Int) {
+        val rgb = CaracatronTextColors.LIGHT
         context.fill(x, y, x + AREA_WIDTH, y + AREA_HEIGHT, (HOVER_FILL_ALPHA shl 24) or rgb)
         context.renderOutline(x, y, AREA_WIDTH, AREA_HEIGHT, (HOVER_OUTLINE_ALPHA shl 24) or rgb)
     }

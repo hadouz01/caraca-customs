@@ -5,9 +5,7 @@ import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.entity.BlockEntity
 
 /**
- * Utility helper responsible for broadcasting stage calculation debug messages to nearby players or server chat.
- *
- * Encapsulates chat notification logic to keep Mixin cognitive complexity low.
+ * Debug chat messages for berry growth, kept out of the mixin so it stays small.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -18,11 +16,13 @@ object BerryDebugNotifier {
     private const val RESET_COLOR_CODE = "§r"
 
     /**
-     * Broadcasts the calculated growth ticks for a berry bush stage to all players in the entity's dimension.
+     * Tells every player in the berry's dimension how many ticks its next stage takes.
      *
-     * @param blockEntity Target block entity instance providing world context.
-     * @param berryName Identifier path or display string of the berry.
-     * @param ticks Calculated tick duration before modifier cancellations.
+     * @param blockEntity Berry block entity.
+     * @param berryName Name of the berry.
+     * @param ticks Ticks the stage takes.
+     * @param hasRichMulch Whether the berry has Rich Mulch.
+     * @param hasGrowthMulch Whether the berry has Growth Mulch.
      */
     fun notifyStageTicksCalculated(blockEntity: BlockEntity, berryName: String, ticks: Int, hasRichMulch: Boolean,
                                    hasGrowthMulch: Boolean) {

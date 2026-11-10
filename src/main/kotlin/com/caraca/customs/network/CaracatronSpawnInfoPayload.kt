@@ -12,12 +12,12 @@ import net.minecraft.resources.ResourceLocation
  * tags prefixed with `#`, so the client can translate them.
  *
  * @property bucket Spawn bucket: `common`, `uncommon`, `rare` or `ultra-rare`.
- * @property position Spawnable position type, e.g. `grounded`, `submerged` or `fishing`.
+ * @property position Spawnable position type, like `grounded`, `submerged` or `fishing`.
  * @property isHerd Whether the species spawns as part of a herd.
  * @property weight Spawn weight inside the bucket.
  * @property biomes Biomes or biome tags the spawn needs, empty for anywhere.
  * @property excludedBiomes Biomes or biome tags the spawn avoids.
- * @property timeRange Named time range, e.g. `day`, or empty for any time.
+ * @property timeRange Named time range, like `day`, or empty for any time.
  * @property weather `rain`, `thunder`, `clear` or empty for any weather.
  * @property canSeeSky Whether it needs (`true`) or avoids (`false`) the open sky, `null` for both.
  * @property minY Lowest spawn height, `null` for none.
@@ -46,7 +46,7 @@ data class CaracatronSpawnEntry(
     /**
      * Writes this entry to a buffer.
      *
-     * @param buf Target buffer.
+     * @param buf Buffer to write to.
      */
     fun write(buf: FriendlyByteBuf) {
         buf.writeUtf(bucket)
@@ -106,7 +106,7 @@ data class CaracatronSnackIngredient(val item: ResourceLocation, val count: Int)
     /**
      * Writes this ingredient to a buffer.
      *
-     * @param buf Target buffer.
+     * @param buf Buffer to write to.
      */
     fun write(buf: FriendlyByteBuf) {
         buf.writeResourceLocation(item)
@@ -143,7 +143,7 @@ data class CaracatronSnackSeasoning(val item: ResourceLocation, val effect: Stri
     /**
      * Writes this seasoning to a buffer.
      *
-     * @param buf Target buffer.
+     * @param buf Buffer to write to.
      */
     fun write(buf: FriendlyByteBuf) {
         buf.writeResourceLocation(item)
@@ -169,14 +169,65 @@ data class CaracatronSnackSeasoning(val item: ResourceLocation, val effect: Stri
 }
 
 /**
+ * A recipe making an item, for the Caracatron's snack tab tooltips and materials page.
+ *
+ * @property type Recipe type, like `minecraft:crafting`.
+ * @property ingredients Ingredients, counted by how many slots take them.
+ * @property width Columns of [grid].
+ * @property grid Slots row by row, `null` for empty ones. Crafting table and Campfire Pot recipes always fill a 3 × 3
+ * grid, shaped ones keeping their layout from the top left; the others list their ingredients in rows of 3.
+ * @property count How many items the recipe makes.
+ *
+ * @author hadouz01
+ * @since 1.35.0
+ */
+data class CaracatronRecipe(
+    val type: String,
+    val ingredients: List<CaracatronSnackIngredient>,
+    val width: Int,
+    val grid: List<ResourceLocation?>,
+    val count: Int
+) {
+
+    /**
+     * Writes this recipe to a buffer.
+     *
+     * @param buf Buffer to write to.
+     */
+    fun write(buf: FriendlyByteBuf) {
+        buf.writeUtf(type)
+        buf.writeCollection(ingredients) { out, ingredient -> ingredient.write(out) }
+        buf.writeVarInt(width)
+        buf.writeCollection(grid) { out, slot -> out.writeNullable(slot) { slotOut, id -> slotOut.writeResourceLocation(id) } }
+        buf.writeVarInt(count)
+    }
+
+    companion object {
+        /**
+         * Reads a recipe written by [write].
+         *
+         * @param buf Source buffer.
+         * @return The decoded recipe.
+         */
+        fun read(buf: FriendlyByteBuf): CaracatronRecipe = CaracatronRecipe(
+            type = buf.readUtf(),
+            ingredients = buf.readList(CaracatronSnackIngredient::read),
+            width = buf.readVarInt(),
+            grid = buf.readList { it.readNullable { slot -> slot.readResourceLocation() } },
+            count = buf.readVarInt()
+        )
+    }
+}
+
+/**
  * How to get an item of the Poké Snack tab, shown when hovering it.
  *
  * @property item Item identifier.
  * @property growsEverywhere Whether it's a berry growing naturally in every Overworld biome.
  * @property biomes Overworld biomes where the berry grows naturally, empty when it doesn't or grows everywhere.
  * @property mutations Pairs of berries that, planted side by side, can grow it.
- * @property recipeType Type of a recipe making the item, e.g. `minecraft:crafting`, empty when nothing makes it.
- * @property recipe Ingredients of that recipe.
+ * @property recipes Every recipe making the item, the main one first (crafting table, shaped, then by id). Empty when
+ * nothing makes it.
  *
  * @author hadouz01
  * @since 1.23.0
@@ -186,14 +237,13 @@ data class CaracatronItemSource(
     val growsEverywhere: Boolean,
     val biomes: List<ResourceLocation>,
     val mutations: List<Pair<ResourceLocation, ResourceLocation>>,
-    val recipeType: String,
-    val recipe: List<CaracatronSnackIngredient>
+    val recipes: List<CaracatronRecipe>
 ) {
 
     /**
      * Writes this source to a buffer.
      *
-     * @param buf Target buffer.
+     * @param buf Buffer to write to.
      */
     fun write(buf: FriendlyByteBuf) {
         buf.writeResourceLocation(item)
@@ -203,8 +253,7 @@ data class CaracatronItemSource(
             out.writeResourceLocation(first)
             out.writeResourceLocation(second)
         }
-        buf.writeUtf(recipeType)
-        buf.writeCollection(recipe) { out, ingredient -> ingredient.write(out) }
+        buf.writeCollection(recipes) { out, recipe -> recipe.write(out) }
     }
 
     companion object {
@@ -219,8 +268,7 @@ data class CaracatronItemSource(
             growsEverywhere = buf.readBoolean(),
             biomes = buf.readList { it.readResourceLocation() },
             mutations = buf.readList { it.readResourceLocation() to it.readResourceLocation() },
-            recipeType = buf.readUtf(),
-            recipe = buf.readList(CaracatronSnackIngredient::read)
+            recipes = buf.readList(CaracatronRecipe::read)
         )
     }
 }
@@ -234,7 +282,8 @@ data class CaracatronItemSource(
  * @property tierMultiplier Spawn rate multiplier at the tier shown on the screen.
  * @property tierLevels Levels natural spawns roll at that tier, `null` while tier spawn levels are off.
  * @property entries Every natural spawn of the species.
- * @property snackRecipe Ingredients of the Poké Snack recipe, empty when no recipe was found.
+ * @property snackRecipe Campfire Pot recipe of the Poké Snack, `null` when none was found.
+ * @property baitRecipe Campfire Pot recipe of the Poké Bait (fishing bait), `null` when none was found.
  * @property snackSeasonings Seasonings whose bait effects favor the species.
  * @property itemSources How to get every item of the Poké Snack tab.
  *
@@ -247,7 +296,8 @@ data class CaracatronSpawnInfoPayload(
     val tierMultiplier: Float,
     val tierLevels: IntRange?,
     val entries: List<CaracatronSpawnEntry>,
-    val snackRecipe: List<CaracatronSnackIngredient>,
+    val snackRecipe: CaracatronRecipe?,
+    val baitRecipe: CaracatronRecipe?,
     val snackSeasonings: List<CaracatronSnackSeasoning>,
     val itemSources: List<CaracatronItemSource>
 ) : CustomPacketPayload {
@@ -263,7 +313,8 @@ data class CaracatronSpawnInfoPayload(
             out.writeVarInt(range.last)
         }
         buf.writeCollection(entries) { out, entry -> entry.write(out) }
-        buf.writeCollection(snackRecipe) { out, ingredient -> ingredient.write(out) }
+        buf.writeNullable(snackRecipe) { out, recipe -> recipe.write(out) }
+        buf.writeNullable(baitRecipe) { out, recipe -> recipe.write(out) }
         buf.writeCollection(snackSeasonings) { out, seasoning -> seasoning.write(out) }
         buf.writeCollection(itemSources) { out, source -> source.write(out) }
     }
@@ -293,7 +344,8 @@ data class CaracatronSpawnInfoPayload(
             tierMultiplier = buf.readFloat(),
             tierLevels = buf.readNullable { it.readVarInt()..it.readVarInt() },
             entries = buf.readList(CaracatronSpawnEntry::read),
-            snackRecipe = buf.readList(CaracatronSnackIngredient::read),
+            snackRecipe = buf.readNullable(CaracatronRecipe::read),
+            baitRecipe = buf.readNullable(CaracatronRecipe::read),
             snackSeasonings = buf.readList(CaracatronSnackSeasoning::read),
             itemSources = buf.readList(CaracatronItemSource::read)
         )

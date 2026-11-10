@@ -19,19 +19,10 @@ data class SpawnLevelWindow(val levels: IntRange, val average: IntRange)
 /**
  * Levels of natural spawns around a player, following the player's tier.
  *
- * A tier's spawns go from its minimum spawn level up to its level cap. The minimum is half the cap minus 3 when the cap
- * is below 50, minus 5 when it's below 80 and minus 10 from 80 on (never below level 1).
- *
- * The "average" band sits between [ConfigData.averageSpawnLevelStart] and [ConfigData.averageSpawnLevelEnd] of the way
- * from the minimum to the cap, and every level in it is equally likely. Levels outside the band get rarer the further
- * they are from it, down to [EDGE_WEIGHT] of a band level at the minimum and at the cap, so no level is ever more
- * common than the band. If the band would get less than [ConfigData.averageSpawnLevelChance] of the spawns, the levels
- * outside it are scaled down until it does. Levels above the band fade
- * linearly and levels below it fade quadratically, so the spawns lean slightly towards the higher levels.
- *
- * With the defaults (40% to 80%, 65% chance), a window from 1 to 20 spawns mostly 9 to 16, 17 and 18 are a bit rare,
- * 19 is rarer and 20 is as rare as level 1. With 6 tiers: tier 1 spawns 5 to 16 (mostly 9 to 14), tier 2 spawns 13 to
- * 32 (mostly 21 to 28) and tier 6 spawns 40 to 100 (mostly 64 to 88).
+ * Spawns go from half the level cap minus 3, 5 or 10 (cap below 50, below 80, from 80 on) up to the cap. Levels in the
+ * average band ([ConfigData.averageSpawnLevelStart] to [ConfigData.averageSpawnLevelEnd]) are the most common and get at
+ * least [ConfigData.averageSpawnLevelChance] of the spawns. Outside it they fade down to [EDGE_WEIGHT], faster below
+ * than above, so spawns lean a bit towards higher levels. With 6 tiers, tier 1 spawns 5 to 16, mostly 9 to 14.
  *
  * @author hadouz01
  * @since 1.9.0

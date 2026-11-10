@@ -16,22 +16,14 @@ import java.util.UUID
 import kotlin.random.Random
 
 /**
- * Applies the tier spawn cap to the natural spawns around a player, fishing and placed Poké Snacks included.
+ * Tier spawn cap for natural spawns around a player, fishing and placed Poké Snacks included.
  *
- * Pokémon whose species belongs to a [SpawnGroup] get their spawn weight multiplied by
- * [SpawnTierTable.multiplierAt] for the player's tier, and can't spawn at all when it's `0`. Species in no group,
- * and spawns that aren't Pokémon, are left untouched.
+ * Grouped species get their weight multiplied by [SpawnTierTable.multiplierAt] and can't spawn at `0`. Herds go member
+ * by member: blocked only when every member is, weighted by their members' average, and a blocked (or much rarer)
+ * member gets swapped for another one of the herd. It also sets spawn levels through [TierSpawnLevels] while
+ * [Feature.SPAWN_LEVELS] is on.
  *
- * Herds (Cobblemon's `pokemon-herd` spawns, which also cover most alphas) mix several species, so they're handled
- * per member: the herd is blocked only when every member is blocked, its weight is multiplied by the average
- * multiplier of its members (weighted by their herd weight), and each herd member about to spawn is swapped for
- * another member of the same herd when its own species is blocked, or with a chance that matches how much rarer it is
- * than the herd's most common allowed member.
- *
- * It also sets the level of every natural Pokémon spawn (snacks included) through [TierSpawnLevels], replacing
- * Cobblemon's own level range, while [Feature.SPAWN_LEVELS] is enabled.
- *
- * @property tier Gives the tier the spawns are capped by and roll their levels from, asked again on every check.
+ * @property tier Gives the tier the spawns are capped by, asked again on every check.
  *
  * @author hadouz01
  * @since 1.5.0

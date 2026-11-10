@@ -4,16 +4,14 @@ import com.cobblemon.mod.common.api.pokeball.catching.CaptureEffect
 import com.cobblemon.mod.common.api.types.ElementalType
 
 /**
- * Data container representing configuration parameters required to instantiate a [ModularPokeBall].
+ * Everything needed to build a [ModularPokeBall]. Catch rates aren't here, they're always read live from
+ * [com.caraca.customs.config.DynamicConfig] by [nameId] and [tier].
  *
- * Catch rate multipliers are not stored here: they are always read live from
- * [com.caraca.customs.config.DynamicConfig] using [nameId] and [tier].
- *
- * @property nameId The snake_case string identifier for the Poké Ball (e.g., "fire_ball", "caraca_ball").
- * @property tier The [BallTier] driving default catch rates and loot table placement.
- * @property elementalTypes The set of [ElementalType] targeted by this Poké Ball's catch logic (defaults to empty set).
- * @property model3dPath The relative path name pointing to the 3D model JSON file (defaults to [nameId]).
- * @property extraCaptureEffects List of optional [CaptureEffect] handlers executed upon successful Pokémon capture.
+ * @property nameId Snake case id of the ball, like `fire_ball`.
+ * @property tier Tier of the ball, which sets its default catch rates and the chests it shows up in.
+ * @property elementalTypes Types the ball is good against, none by default.
+ * @property model3dPath Name of the 3D model file, [nameId] by default.
+ * @property extraCaptureEffects Extra effects run when a Pokémon is caught with it.
  *
  * @author hadouz01
  * @since 1.0.0

@@ -7,10 +7,8 @@ import com.cobblemon.mod.common.api.types.ElementalType
 import com.cobblemon.mod.common.api.types.ElementalTypes
 
 /**
- * Single source of truth for every custom Poké Ball definition.
- *
- * Balls are grouped by family (regular, regular ultra, ancient, ancient ultra). The declaration order
- * is kept by [ALL] and drives the creative tab order.
+ * Every custom Poké Ball, grouped by family (regular, regular ultra, ancient, ancient ultra). [ALL] keeps the
+ * declaration order, which is also the creative tab order.
  *
  * @author hadouz01
  * @since 1.0.0

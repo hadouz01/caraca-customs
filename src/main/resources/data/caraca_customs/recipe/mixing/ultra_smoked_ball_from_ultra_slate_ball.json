@@ -1,0 +1,17 @@
+{
+    "fabric:load_conditions": [
+        { "condition": "caraca_customs:feature_enabled", "feature": "custom_balls" }
+    ],
+    "type": "minecraft:crafting_shapeless",
+    "category": "equipment",
+    "group": "caraca_ultra_balls",
+    "ingredients": [
+        { "item": "caraca_customs:ultra_slate_ball" },
+        { "item": "cobblemon:white_apricorn" },
+        { "item": "cobblemon:white_apricorn" }
+    ],
+    "result": {
+        "count": 1,
+        "id": "caraca_customs:ultra_smoked_ball"
+    }
+}

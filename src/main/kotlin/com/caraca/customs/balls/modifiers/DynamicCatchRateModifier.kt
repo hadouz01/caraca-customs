@@ -6,10 +6,10 @@ import com.cobblemon.mod.common.pokemon.Pokemon
 import net.minecraft.world.entity.LivingEntity
 
 /**
- * Catch rate modifier for Poké Balls without elemental affinities, reading the default
- * multiplier from [DynamicConfig] on every call so configuration changes apply immediately.
+ * Catch rate modifier of the balls without elemental types. The multiplier is read from [DynamicConfig] on every call,
+ * so config changes apply right away.
  *
- * @property ballNameId Identifier path of the host Poké Ball.
+ * @property ballNameId Path of the ball's identifier.
  *
  * @author hadouz01
  * @since 1.0.0

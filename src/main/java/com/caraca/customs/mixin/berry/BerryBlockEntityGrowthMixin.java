@@ -23,11 +23,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Mixin targeting Cobblemon's {@link BerryBlockEntity} to dynamically calculate growth stage durations,
- * apply Growth Mulch stage acceleration, and manage the persistent Mulch harvest counter.
+ * Hooks into Cobblemon's {@link BerryBlockEntity} for the custom growth stage times, Growth Mulch and the mulch
+ * harvest counter.
  * <p>
- * Vanilla lifecycle methods ({@code saveAdditional}, {@code loadAdditional}) are remapped, while
- * Cobblemon members are targeted with {@code remap = false}.
+ * Vanilla methods are remapped, Cobblemon ones use {@code remap = false}.
  *
  * @author hadouz01
  * @since 1.0.0

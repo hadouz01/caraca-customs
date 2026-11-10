@@ -10,14 +10,14 @@ import com.cobblemon.mod.common.pokemon.status.PersistentStatus
 import net.minecraft.world.entity.LivingEntity
 
 /**
- * Catch rate modifier for Poké Balls operating on target elemental type alignments.
+ * Catch rate modifier of the elemental Poké Balls.
  *
- * Uses the boosted multiplier when the target shares one of [types] or suffers a status tied to them
- * (Burn for Fire, Paralysis for Electric, Poison for Poison, Freeze for Ice), doubling it while asleep.
- * Multipliers are resolved from [DynamicConfig] on every call so configuration changes apply immediately.
+ * The boosted multiplier applies when the target has one of the ball's [types] or a status tied to them (Burn for
+ * Fire, Paralysis for Electric, Poison for Poison, Freeze for Ice), and doubles while it's asleep. Multipliers are read
+ * from [DynamicConfig] on every call, so config changes apply right away.
  *
- * @property ballNameId Identifier path of the host Poké Ball.
- * @property types Set of target [ElementalType] instances governing boosted multiplier calculations.
+ * @property ballNameId Path of the ball's identifier.
+ * @property types Types that boost the catch rate.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -49,10 +49,10 @@ class ElementalBallCatchRateModifier(
         targetTypes.any { it in types } || verifyStatus(status)
 
     /**
-     * Resolves the multiplier for a target using the live configuration.
+     * Gets the multiplier for a target, read live from the config.
      *
-     * @param targetTypes Elemental types of the target Pokémon.
-     * @param status Active persistent status of the target, if any.
+     * @param targetTypes Types of the target.
+     * @param status Status of the target, if any.
      * @return The default multiplier, or the boosted one (doubled while asleep) when [isConditionMet].
      */
     fun resolveMultiplier(targetTypes: Iterable<ElementalType>, status: PersistentStatus?): Float {
@@ -64,10 +64,9 @@ class ElementalBallCatchRateModifier(
     }
 
     /**
-     * Verifies if a persistent status aligns with target types.
+     * Whether a status is tied to one of the ball's types.
      *
-     * @param pokemonStatus Target active status.
-     * @return `true` if matched; `false` otherwise.
+     * @param pokemonStatus Status of the target.
      */
     fun verifyStatus(pokemonStatus: PersistentStatus?): Boolean {
         if (pokemonStatus == null) return false

@@ -19,8 +19,8 @@ import net.minecraft.server.level.ServerPlayer
  * Enforces the level caps of [PlayerTiers] and tells players when they reach a new tier.
  *
  * Experience that would push a player-owned Pokémon past its owner's level cap is trimmed so it stops right at the cap,
- * and blocked entirely once it gets there. Experience given by commands (e.g. `/levelup`) ignores the cap, and setting
- * the level directly (e.g. `/pokeedit`) never goes through experience at all.
+ * and blocked entirely once it gets there. Experience given by commands (like `/levelup`) ignores the cap, and setting
+ * the level directly (like `/pokeedit`) never goes through experience at all.
  *
  * Every new species registered as caught is also recorded in the [SharedPokedex]. When it grows the shared pool, every
  * online player who shares tiers is refreshed and told who registered it.
@@ -55,7 +55,7 @@ object LevelCapHandler {
     /**
      * Recomputes the tiers of every online player without notifying them, used after the config is reloaded.
      *
-     * @param server The running server instance.
+     * @param server Running server.
      */
     fun refreshTiers(server: MinecraftServer) {
         SharedPokedex.refreshBlocklist()
@@ -114,7 +114,7 @@ object LevelCapHandler {
      * Recomputes the tiers of every online player who shares tiers after the shared pool grew, telling each one who went
      * up who registered the new species.
      *
-     * @param server The running server instance.
+     * @param server Running server.
      * @param catcherName Name of the player who registered the species.
      */
     private fun refreshSharedTiers(server: MinecraftServer, catcherName: Component) {

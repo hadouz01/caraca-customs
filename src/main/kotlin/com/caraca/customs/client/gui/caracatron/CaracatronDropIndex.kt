@@ -17,13 +17,11 @@ import net.minecraft.resources.ResourceLocation
 data class CaracatronDropGroup(val formName: String?, val entries: List<ItemDropEntry>)
 
 /**
- * Item search of the Caracatron's drops page, built once from the drop tables Cobblemon syncs to the client with every
- * species, so searching never asks the server anything.
+ * Item search of the drops page, built from the drop tables Cobblemon already syncs with the species, so it never asks
+ * the server anything.
  *
- * Every item dropped by any listed species is indexed once, with its name in the game's language (lowercase, without
- * accents) and its id (e.g. `minecraft:emerald`), along with the positions of the species that drop it. A search only
- * walks that item list (a few hundred items, against thousands of drop entries), marking the species of every match, so
- * it stays light on every keystroke.
+ * Each dropped item is indexed once with its name and id, along with the species that drop it, so a search only walks a
+ * few hundred items.
  *
  * @param species Listed species, in the order of the Caracatron's list.
  * @param normalize Lowercases a text and strips its accents, the same way species names are searched.
@@ -88,6 +86,24 @@ class CaracatronDropIndex(species: List<Species>, normalize: (String) -> String)
     fun holderCount(item: ResourceLocation): Int = holderCounts[item] ?: 0
 
     /**
+     * Scores how much of the given items a species drops: the best of its matching drops, by average amount times chance,
+     * so a sure single drop and a rare stack can be compared.
+     *
+     * @param index Position in the species list.
+     * @param items Searched items.
+     */
+    fun bestDrop(index: Int, items: Set<ResourceLocation>): Double {
+        return dropsAt(index).asSequence()
+            .flatMap { it.entries }
+            .filter { it.item in items }
+            .maxOfOrNull { entry ->
+                val range = entry.quantityRange
+                val amount = if (range != null) (range.first + range.last) / 2.0 else entry.quantity.toDouble()
+                amount * entry.percentage
+            } ?: 0.0
+    }
+
+    /**
      * Finds the items whose name or id contains the query, and the species that drop them. The last search is kept, so
      * redrawing or refiltering with the same text costs nothing.
      *
@@ -109,8 +125,8 @@ class CaracatronDropIndex(species: List<Species>, normalize: (String) -> String)
     }
 
     /**
-     * Groups a species' item drops: its standard form's first, then every other form with a drop table of its own (e.g.
-     * regional forms).
+     * Groups a species' item drops: its standard form's first, then every other form with its own drop table, like
+     * regional forms.
      */
     private fun groupsOf(species: Species): List<CaracatronDropGroup> {
         val base = species.standardForm.drops

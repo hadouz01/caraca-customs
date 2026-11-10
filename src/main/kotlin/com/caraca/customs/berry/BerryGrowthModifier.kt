@@ -10,15 +10,11 @@ import java.lang.reflect.Field
 import java.util.WeakHashMap
 
 /**
- * Reflection utility updating registered [Berry] growth parameters at startup and runtime.
+ * Writes the configured growth range (in minutes, like Cobblemon) into each berry's `growthTime` through reflection.
+ * Stage times themselves come from `BerryBlockEntityGrowthMixin`.
  *
- * Writes the configured growth range (in minutes, the unit Cobblemon expects) into each berry's
- * `growthTime`, keeping Cobblemon's own timers and the data synced to clients consistent with the
- * configuration. Stage durations themselves are calculated by `BerryBlockEntityGrowthMixin`.
- *
- * Berries are datapack-driven, so the values are re-applied after every server start and datapack reload. Each berry's
- * original range is remembered the first time it's changed, so it can be restored while [Feature.BERRY_MECHANICS] is
- * disabled.
+ * Berries come from datapacks, so this runs again after every server start and datapack reload. A berry's original
+ * range is kept the first time it changes, so it can be put back while [Feature.BERRY_MECHANICS] is off.
  *
  * @author hadouz01
  * @since 1.0.0

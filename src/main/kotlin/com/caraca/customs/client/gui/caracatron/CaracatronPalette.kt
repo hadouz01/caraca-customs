@@ -7,13 +7,11 @@ import net.minecraft.resources.ResourceLocation
 import kotlin.math.roundToInt
 
 /**
- * Color map from Cobblemon's Pokédex to a Caracatron screen color, learned from textures both have with the same layout
- * (the screen, its bars, scroll track and type bars): every Pokédex color found in them is mapped to the color most
- * often found at the same pixels of the Caracatron's version.
+ * Maps Cobblemon's Pokédex colors to a Caracatron screen color, learned pixel by pixel from the textures both share
+ * (screen, bars, scroll track and type bars).
  *
- * Colors that aren't in the map are taken to the nearest mapped color when it's close enough ([MAX_DISTANCE]), keeping
- * their brightness difference from it, so lighter and darker shades of the Pokédex's cyan follow along. Colors far from
- * every mapped one (type colors, reds, grays) are left as they are.
+ * Unknown colors follow the nearest known one when it's within [MAX_DISTANCE], keeping their brightness difference.
+ * Anything farther (types, reds, grays) stays as it is.
  *
  * @param pairs Pokédex textures and their Caracatron counterparts.
  *

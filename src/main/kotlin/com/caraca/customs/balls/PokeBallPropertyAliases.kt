@@ -7,13 +7,11 @@ import com.cobblemon.mod.common.api.pokeball.PokeBalls
 import com.cobblemon.mod.common.util.simplify
 
 /**
- * Makes the custom Poké Balls usable through the `pokeball=` Pokémon property (`/givepokemon`, `/pokeedit`, spawns...).
+ * Lets `pokeball=` (`/givepokemon`, `/pokeedit`, spawns...) find the custom Poké Balls.
  *
- * Cobblemon defaults namespace-less values to `cobblemon:`, so `pokeball=lavender_ball` would never find a custom
- * ball and `pokeball=poke_ball` would always pick the native one. Bare names now resolve to the custom ball first,
- * while the native ones it replaces stay reachable through their full id (e.g. `cobblemon:poke_ball`).
- *
- * While [Feature.CUSTOM_BALLS] is disabled, Cobblemon's own behavior is kept.
+ * Cobblemon reads bare names as `cobblemon:`, so `pokeball=lavender_ball` never found a custom ball and
+ * `pokeball=poke_ball` always gave the native one. Bare names now go to the custom ball first, and the native ball is
+ * still there by its full id. Nothing changes while [Feature.CUSTOM_BALLS] is off.
  *
  * @author hadouz01
  * @since 1.3.20

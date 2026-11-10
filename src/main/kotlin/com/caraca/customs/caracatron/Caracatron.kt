@@ -50,14 +50,9 @@ import net.minecraft.world.item.crafting.RecipeManager
 /**
  * Server side of the Caracatron 3000: registers the item and builds the data its screen shows.
  *
- * Every implemented species is listed, natural spawns or not. Species with natural spawns are listed in the first tier
- * they can spawn in, even at a reduced rate, the same way the species surplus counts them; species without natural
- * spawns are listed in their spawn group's tier ([SpawnTierTable.homeTierOf]). With the spawn cap off every species
- * belongs to tier 1, since nothing is held back. When the player shares tiers, the screen shows the world's tier and the
- * shared Pokédex.
- *
- * Spawn info requests are answered with the species' natural spawns and the Poké Snack recipe, along with the
- * seasonings that attract it.
+ * Every implemented species is listed. Species with natural spawns go in the first tier they can spawn in (reduced rate
+ * included, like the species surplus counts them), the others in their spawn group's tier ([SpawnTierTable.homeTierOf]).
+ * With the spawn cap off, everything is tier 1.
  *
  * @author hadouz01
  * @since 1.12.0
@@ -188,12 +183,15 @@ object Caracatron {
         val tierLevels = if (Feature.SPAWN_LEVELS.isEnabled) TierSpawnLevels.windowFor(tier).levels else null
         val details = runCatching { CobblemonSpawnPools.WORLD_SPAWN_POOL.details.toList() }.getOrDefault(emptyList())
         val entries = details.mapNotNull { detail -> entryOf(detail, species) }
-        val snackRecipes = snackRecipes(player.server.recipeManager)
+        val snackRecipes = baitRecipes(player.server.recipeManager, CobblemonItems.POKE_SNACK)
         val forms = spawnFormsOf(speciesData, details)
         val hasRareSpawns = entries.any { it.bucket != "common" }
-        val snackRecipe = snackRecipes.firstOrNull()?.let(CaracatronItemSources::ingredientsOf).orEmpty()
+        val registries = player.server.registryAccess()
+        val snackRecipe = snackRecipes.firstOrNull()?.let { CaracatronItemSources.recipeOf(it, registries) }
         val snackSeasonings = if (entries.isEmpty()) emptyList() else seasoningsFor(snackRecipes, forms, hasRareSpawns)
-        val snackItems = snackRecipe.map { it.item } + snackSeasonings.map { it.item }
+        val baitRecipe = baitRecipes(player.server.recipeManager, CobblemonItems.POKE_BAIT).firstOrNull()
+            ?.let { CaracatronItemSources.recipeOf(it, registries) }
+        val snackItems = listOfNotNull(snackRecipe, baitRecipe).flatMap { it.ingredients }.map { it.item } + snackSeasonings.map { it.item }
 
         ServerPlayNetworking.send(
             player,
@@ -204,6 +202,7 @@ object Caracatron {
                 tierLevels = tierLevels,
                 entries = entries,
                 snackRecipe = snackRecipe,
+                baitRecipe = baitRecipe,
                 snackSeasonings = snackSeasonings,
                 itemSources = CaracatronItemSources.sourcesOf(snackItems, player.server)
             )
@@ -211,13 +210,13 @@ object Caracatron {
     }
 
     /**
-     * Every cooking pot recipe that makes a Poké Snack with spawn bait seasonings.
+     * Every cooking pot recipe that makes an item (a Poké Snack or Poké Bait) with spawn bait seasonings.
      */
-    private fun snackRecipes(recipes: RecipeManager): List<CookingPotRecipeBase> {
+    private fun baitRecipes(recipes: RecipeManager, result: Item): List<CookingPotRecipeBase> {
         val all = recipes.getAllRecipesFor(CobblemonRecipeTypes.COOKING_POT_COOKING).map { it.value() } +
             recipes.getAllRecipesFor(CobblemonRecipeTypes.COOKING_POT_SHAPELESS).map { it.value() }
         return all.filter { recipe ->
-            recipe.result.`is`(CobblemonItems.POKE_SNACK) && recipe.seasoningProcessors.any { it.type == SPAWN_BAIT_PROCESSOR }
+            recipe.result.`is`(result) && recipe.seasoningProcessors.any { it.type == SPAWN_BAIT_PROCESSOR }
         }
     }
 

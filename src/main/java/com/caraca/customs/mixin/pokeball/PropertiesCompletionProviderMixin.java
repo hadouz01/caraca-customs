@@ -22,7 +22,7 @@ public abstract class PropertiesCompletionProviderMixin {
      * Swaps the default Poké Ball suggestions for {@link PokeBallPropertyAliases#suggestions()}, leaving every other
      * property untouched.
      *
-     * @param provider    Completion provider instance.
+     * @param provider    Cobblemon's completion provider.
      * @param keys        Property keys of the injected suggestions.
      * @param suggestions Default suggestions.
      */

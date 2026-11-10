@@ -1,5 +1,6 @@
 package com.caraca.customs.client.gui.caracatron
 
+import com.caraca.CaracaCustoms
 import com.caraca.customs.network.CaracatronMaterialInfoPayload
 import com.caraca.customs.network.CaracatronMaterialRequestPayload
 import com.caraca.customs.network.CaracatronOpenPayload
@@ -42,38 +43,15 @@ import java.text.Normalizer
 import kotlin.math.ceil
 
 /**
- * Screen of the Caracatron 3000, laid out like Cobblemon's Pokédex.
+ * Screen of the Caracatron 3000, laid out like Cobblemon's Pokédex, following `exemplo_caracatron.png`.
  *
- * - **Header:** the tier shown (the world's while sharing tiers, otherwise the player's), how many species are available
- *   up to that tier and how many of them were caught.
- * - **Left panel:** a search bar (name, case-insensitive and ignoring accents, or dex number), the species picked in the
- *   bottom filter (every species by tier, every species by dex number, or one tier) and a scroll bar. Each slot shows the
- *   dex number, whether the species was caught and its model, over its tier's slot texture (or outlined with its tier's
- *   color, [CaracatronTierColors], when there's no texture for every tier). Uncaught species get a dark filter over the
- *   slot. While sharing tiers, the globe switches between everyone's captures and the player's own.
- * - **Right panel:** types, dex number, name and tier of the selected species, and either its spawn pool for the rarity
- *   picked in the bottom icons or, in the last icon, how to attract it with a Poké Snack. Both are asked to the server on
- *   selection and cached while the screen is open.
+ * The header shows the tier and the available and caught counts, the left panel lists species (search, filter and scroll
+ * bar) and the right panel shows the selected species' spawns by rarity, or how to attract it with a snack.
  *
- * - **Page navigation:** at the top, "< Guide" and "Pokédex >" open the other pages of the Caracatron
- *   ([CaracatronNavigation], [CaracatronPages]), which come back to this same screen.
- * - **Drops page:** this same screen with [page] set to [CaracatronPage.DROPS] ([showPage]). The search looks for item
- *   names and ids instead, listing only the species that drop a matching item ([CaracatronDropIndex]), every model shows
- *   without the uncaught filter, and the right panel lists the selected species' drops ([CaracatronDropText]) instead of
- *   its spawns, with no info tabs.
- * - **Materials page:** this same screen with [page] set to [CaracatronPage.MATERIALS]. The list starts empty and shows
- *   the items whose name or id matches a search of two letters or more ([CaracatronMaterialIndex]), each slot with the
- *   item's sprite. Selecting an item asks the server where it comes from (generated blocks, structures, brushing,
- *   chests, recipes) and the right panel shows it ([CaracatronMaterialText]), cached while the screen is open. Two tabs
- *   under the panel, in the first rarity icon spots, switch between natural generation and structures. Clicking the
- *   Pokémon drops line opens the drops page searching the item's id.
- *
- * Lines of the info panel can start with an item icon ([CaracatronInfoLine.item]), named in a tooltip when hovered.
- *
- * Every element is placed relative to the Caracatron's top left corner, following `exemplo_caracatron.png`. The screen
- * parts come from the texture folder of the color picked in the select at the top center ([CaracatronColorSelect]), saved
- * as [com.caraca.customs.config.ConfigData.caracatronScreenColor], and the texts take that color's text colors
- * ([CaracatronTextColors]). Icons and slots are the same for every color.
+ * The same screen also runs the Drops page (search by item or species, drops on the right) and the Materials page
+ * (search any item, its sources on the right in four tabs), through [page] and [showPage]. The other pages go through
+ * [CaracatronPages]. Textures and text colors follow the picked screen color ([CaracatronColorSelect],
+ * [CaracatronTextColors]).
  *
  * @param data Player progress sent by the server.
  *
@@ -133,7 +111,16 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
         private const val INFO_TAB_ARROW_Y = 177
         private val INFO_TAB_X = intArrayOf(188, 218, 248, 278, 308)
         private val INFO_TAB_ICONS = listOf("common_icon", "uncommon_icon", "rare_icon", "ultra_rare_icon", "snack_icon")
-        private val MATERIAL_TAB_ICONS = listOf("materials_world_icon", "materials_structure_icon")
+        private val MATERIAL_TAB_ICONS = listOf("materials_world_icon", "materials_structure_icon", "materials_recipe_icon", "materials_brush_icon")
+
+        /**
+         * Left edges of the materials tab icons, spread "space around" over the info panel: the same gap between the icons
+         * and half of it at both ends.
+         */
+        private val MATERIAL_TAB_X = MATERIAL_TAB_ICONS.indices.map { index ->
+            val gap = (INFO_WIDTH - MATERIAL_TAB_ICONS.size * ICON_SIZE * SCALE) / MATERIAL_TAB_ICONS.size
+            INFO_X + gap / 2 + index * (ICON_SIZE * SCALE + gap)
+        }
         private const val SNACK_TAB = "snack"
         private val INFO_TABS = CaracatronSpawnText.BUCKETS + SNACK_TAB
 
@@ -151,6 +138,35 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
         private const val ITEM_SIZE = 16
         private const val SLOT_ITEM_OFFSET = 4
         private const val INFO_ICON_OFFSET = 1
+        private const val GRID_CELL_ON_LIGHT = 0x28000000
+        private const val ARROW_ON_LIGHT = 0x60000000
+        private const val ARROW_ON_DARK = 0x60FFFFFF
+        private const val STAGE_ON_LIGHT = 0x40000000
+        private const val STAGE_ON_DARK = 0x40FFFFFF
+        private const val FLAME_SIZE = 14
+        private val FLAME: ResourceLocation = ResourceLocation.withDefaultNamespace("container/furnace/lit_progress")
+
+        /**
+         * Stands for the flame slot of a furnace recipe when looking up what's under the mouse.
+         */
+        private val FUEL_SLOT: ResourceLocation = CaracaCustoms.id("fuel")
+
+        /**
+         * Plain text color of the materials page on dark panels (Noir), a bit lighter than the other pages.
+         */
+        private const val MATERIALS_DARK_PANEL_TEXT = 0x909090
+        private const val INFO_UNITS = (INFO_TEXT_WIDTH / SCALE).toInt()
+
+        /**
+         * Dex number color of the slots without the dark filter on light screens (Blanc, Canary, Lime).
+         */
+        private const val SLOT_NUMBER_DARK = 0x000000
+        private const val GRID_CELL_ON_DARK = 0x30FFFFFF
+
+        /**
+         * Recipe grid squares of the materials page on dark panels (Noir), 15% fainter than the snack tab's.
+         */
+        private const val MATERIALS_GRID_CELL_ON_DARK = 0x29FFFFFF
 
         /**
          * How far the dex number and name move right for species with two types, clearing the longer type bar. The name
@@ -176,18 +192,24 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
         private const val FILTER_Z = -1000.0f
 
         /**
-         * Opens the screen with the progress sent by the server.
+         * Opens the screen with the progress sent by the server, on the page, searches and selections the Caracatron was
+         * last closed with ([CaracatronState]).
          *
          * @param data Player progress.
          */
         fun open(data: CaracatronOpenPayload) {
             CaracatronTextColors.clear()
             CaracatronPokedexSkin.clear()
-            Minecraft.getInstance().setScreen(CaracatronScreen(data))
+            CaracatronFuels.clear()
+            val screen = CaracatronScreen(data)
+            screen.restore()
+            Minecraft.getInstance().setScreen(screen)
+            val last = CaracatronState.lastPage
+            if (last != CaracatronPage.CARACA) CaracatronPages.open(last, screen, click = false)
         }
 
         /**
-         * Writes a tier as a Roman numeral, e.g. 4 becomes `IV`.
+         * Writes a tier as a Roman numeral, so 4 becomes `IV`.
          *
          * @param number Number from 1 up.
          * @return The Roman numeral, or the plain number past 3999.
@@ -278,6 +300,14 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
         CaracatronNavigation(shown) { CaracatronPages.open(it, this) }
     }
 
+    /**
+     * Drawer of the filter bar, on every page but Materials.
+     */
+    private val filterSelect = CaracatronFilterSelect { picked ->
+        filter = picked
+        updateFilter()
+    }
+
     private val navigation: CaracatronNavigation get() = navigations.getValue(page)
 
     private val showsDrops: Boolean get() = page == CaracatronPage.DROPS
@@ -285,6 +315,8 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
     private val showsMaterials: Boolean get() = page == CaracatronPage.MATERIALS
 
     private val showsSpawns: Boolean get() = page == CaracatronPage.CARACA
+
+    private val showsSnack: Boolean get() = showsSpawns && selectedTab == SNACK_TAB
 
     private val entries: List<Entry> = data.speciesTiers.mapNotNull { (id, tier) ->
         PokemonSpecies.getByIdentifier(id)?.let { it to tier }
@@ -308,13 +340,27 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
     private var selectedMaterial: Item? = null
     private var selectedMaterialTab = CaracatronMaterialText.WORLD
     private var hoveredDrop: ResourceLocation? = null
+    private var hoveredLink: String? = null
+    private var pendingScroll = false
+    private val materialStages = mutableMapOf<ResourceLocation, CaracatronGrowthStages?>()
     private var materialQueryLength = 0
     private val materialTabContent = mutableMapOf<ResourceLocation, List<Boolean>>()
     private val materialInfo = mutableMapOf<ResourceLocation, CaracatronMaterialInfoPayload>()
     private val itemStacks = mutableMapOf<ResourceLocation, ItemStack>()
 
-    private val filters: List<CaracatronFilter> = listOf(CaracatronFilter.AllByTier, CaracatronFilter.AllByNumber) +
-        (1..data.tierCount).map { CaracatronFilter.Tier(it) }
+    private val tierFilters: List<CaracatronFilter> = (1..data.tierCount).map { CaracatronFilter.Tier(it) }
+
+    /**
+     * Filters of the category bar. The drops page gets "By biggest drop" while it searches something.
+     */
+    private val filters: List<CaracatronFilter>
+        get() {
+            val byDrop = if (showsDrops && dropQuery.isNotEmpty()) listOf(CaracatronFilter.ByDrop) else emptyList()
+            return listOf(CaracatronFilter.AllByTier, CaracatronFilter.AllByNumber) + byDrop + tierFilters
+        }
+
+    private var dropQuery = ""
+    private var dropSpecies: BooleanArray? = null
 
     private val availableCount = entries.count { it.tier <= data.tier }
 
@@ -327,7 +373,7 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
     private val itemTooltips = mutableMapOf<ResourceLocation, List<Component>>()
 
     private var showingWorld = data.isShared
-    private var filterIndex = 0
+    private var filter: CaracatronFilter = CaracatronFilter.AllByTier
     private var filtered: List<Entry> = emptyList()
     private var selected: Entry? = null
     private var selectedTab = INFO_TABS.first()
@@ -340,20 +386,42 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
 
     private val caughtSpecies: Set<ResourceLocation> get() = if (showingWorld) data.worldCaught else data.ownCaught
 
-    private val filter: CaracatronFilter get() = filters[filterIndex]
-
     private val textColors: CaracatronTextColors get() = CaracatronTextColors.of(folder)
 
     private fun part(name: String): ResourceLocation = CaracatronColors.part(folder, name)
 
     override fun init() {
-        val previousSearch = if (::searchBox.isInitialized) searchBox.value else ""
+        val firstInit = !::searchBox.isInitialized
+        val previousSearch = if (firstInit) searches[page].orEmpty() else searchBox.value
         searchBox = CaracatronSearchBox(left + 37, top + 29, 112, 10, searchHint()).apply {
             value = previousSearch
             setResponder { updateFilter() }
         }
         addRenderableWidget(searchBox)
         updateFilter()
+        if (firstInit && showsSpawns) selected?.let(::requestSpawnInfo)
+    }
+
+    /**
+     * Brings back the searches, selections and tabs of the last time the Caracatron was closed, before the screen opens.
+     */
+    private fun restore() {
+        searches.putAll(CaracatronState.searches)
+        selected = CaracatronState.species?.let { id -> entries.firstOrNull { it.species.resourceIdentifier == id } }
+        selectedMaterial = CaracatronState.material?.let { BuiltInRegistries.ITEM.getOptional(it).orElse(null) }
+        CaracatronState.spawnTab?.takeIf { it in INFO_TABS }?.let { selectedTab = it }
+        CaracatronState.materialTab?.takeIf { it in CaracatronMaterialText.TABS }?.let { selectedMaterialTab = it }
+        pendingScroll = true
+    }
+
+    /**
+     * Remembers the searches, selections and tabs when the screen closes or another page opens over it.
+     */
+    override fun removed() {
+        super.removed()
+        if (::searchBox.isInitialized) searches[page] = searchBox.value
+        val material = selectedMaterial?.let { BuiltInRegistries.ITEM.getKey(it) }
+        CaracatronState.remember(searches, selectedSpecies, material, selectedTab, selectedMaterialTab)
     }
 
     /**
@@ -364,6 +432,7 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
      */
     fun showPage(shown: CaracatronPage) {
         if (shown == page || shown !in navigations) return
+        filterSelect.close()
         if (::searchBox.isInitialized) searches[page] = searchBox.value
         page = shown
         infoScroll.reset()
@@ -395,7 +464,6 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
      * Draws the frame, the screen and the panel parts under the widgets.
      */
     override fun renderBackground(context: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
-        renderTransparentBackground(context)
         val pose = context.pose()
         blitk(matrixStack = pose, texture = CaracatronPages.FRAME, x = left, y = top, width = BASE_WIDTH, height = BASE_HEIGHT)
         blitk(matrixStack = pose, texture = screenTexture, x = left, y = top, width = BASE_WIDTH, height = BASE_HEIGHT)
@@ -409,11 +477,23 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
         renderHeader(context)
         renderSearchAndFilter(context)
         if (showsMaterials) renderMaterialSlots(context, mouseX, mouseY) else renderSlots(context, mouseX, mouseY)
+        if (pendingScroll) scrollToSelection()
         updateHoveredDrop(mouseX - left, mouseY - top)
+        val link = linkAt(mouseX - left, mouseY - top)
+        if (link != hoveredLink) {
+            hoveredLink = link
+            rebuildInfo()
+        }
         renderInfo(context)
-        val colors = textColors
-        navigation.render(context, left, top, (mouseX - left).toDouble(), (mouseY - top).toDouble(), colors)
-        colorSelect.render(context, left, top, (mouseX - left).toDouble(), (mouseY - top).toDouble(), colors)
+        navigation.render(context, left, top, (mouseX - left).toDouble(), (mouseY - top).toDouble())
+        if (!showsMaterials) {
+            if (filterSelect.isOpen) {
+                context.flush()
+                RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX)
+            }
+            filterSelect.render(context, left, top, (mouseX - left).toDouble(), (mouseY - top).toDouble(), filter, scrollbarTrack)
+        }
+        colorSelect.render(context, left, top, (mouseX - left).toDouble(), (mouseY - top).toDouble(), page.label())
         renderTooltips(context, mouseX, mouseY)
     }
 
@@ -440,8 +520,12 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
             return
         }
         largeText(context, filter.label(), 37, 181)
-        arrow(context, CATEGORY_ARROW_X.toFloat(), CATEGORY_UP_Y.toFloat(), pointingUp = true, alpha = if (filterIndex > 0) 1.0f else DIMMED_ALPHA)
-        arrow(context, CATEGORY_ARROW_X.toFloat(), CATEGORY_DOWN_Y.toFloat(), pointingUp = false, alpha = if (filterIndex < filters.lastIndex) 1.0f else DIMMED_ALPHA)
+        val available = filters
+        val index = available.indexOf(filter)
+        val upAlpha = if (index > 0) 1.0f else DIMMED_ALPHA
+        val downAlpha = if (index < available.lastIndex) 1.0f else DIMMED_ALPHA
+        arrow(context, CATEGORY_ARROW_X.toFloat(), CATEGORY_UP_Y.toFloat(), pointingUp = true, alpha = upAlpha)
+        arrow(context, CATEGORY_ARROW_X.toFloat(), CATEGORY_DOWN_Y.toFloat(), pointingUp = false, alpha = downAlpha)
     }
 
     private fun renderSlots(context: GuiGraphics, mouseX: Int, mouseY: Int) {
@@ -453,9 +537,10 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
             renderSlotBackground(context, entry, x, y)
             renderSlotSelection(context, x, y, entry == selected, index == hovered)
 
-            val caught = entry.species.resourceIdentifier in caughtSpecies
-            renderModel(context, entry, x, y, caught || showsDrops)
+            val unfiltered = showsDrops || entry.species.resourceIdentifier in caughtSpecies
+            renderModel(context, entry, x, y, unfiltered)
 
+            val darkNumber = unfiltered && textColors.screen == CaracatronTextColors.DARK
             pose.pushPose()
             pose.translate(0.0, 0.0, 100.0)
             drawScaledText(
@@ -464,7 +549,8 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
                 x = x + 2,
                 y = y + 2.5,
                 scale = SCALE,
-                shadow = true
+                colour = if (darkNumber) SLOT_NUMBER_DARK else CaracatronTextColors.LIGHT,
+                shadow = !darkNumber
             )
             caughtIconHalf(entry)?.let { half ->
                 icon(context, caughtSlotSmallIcon, x - left + SLOT_CAUGHT_X, y - top + SLOT_CAUGHT_Y, width = SMALL_ICON_SIZE, height = SMALL_ICON_SIZE, vOffset = half * SMALL_ICON_SIZE, textureHeight = SMALL_ICON_SIZE * 2)
@@ -531,7 +617,9 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
      * Index of the slot under the mouse, or `-1` when there's none or the color select covers it.
      */
     private fun hoveredSlot(mouseX: Int, mouseY: Int): Int {
-        if (colorSelect.isOver((mouseX - left).toDouble(), (mouseY - top).toDouble())) return -1
+        val x = (mouseX - left).toDouble()
+        val y = (mouseY - top).toDouble()
+        if (colorSelect.isOver(x, y) || filterSelect.isOverDrawer(x, y)) return -1
         return slotAt(mouseX.toDouble(), mouseY.toDouble())
     }
 
@@ -695,15 +783,15 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
     }
 
     /**
-     * Draws the materials page tabs under the info panel, in the first rarity icon spots: natural generation and
-     * structures, dimmed when they have nothing for the selected item, with the select arrow over the open one.
+     * Draws the materials page tabs under the info panel, spread over its width: natural generation, structures, recipes
+     * and digging, dimmed when they have nothing for the selected item, with the select arrow over the open one.
      */
     private fun renderMaterialTabs(context: GuiGraphics) {
         val info = selectedMaterialInfo()
         CaracatronMaterialText.TABS.forEachIndexed { index, tab ->
-            val x = INFO_TAB_X[index]
+            val x = MATERIAL_TAB_X[index].toFloat()
             val hasContent = info != null && materialTabsWithContent(info)[index]
-            icon(context, materialTabIcons[index], x.toFloat(), INFO_TAB_Y.toFloat(), alpha = if (hasContent) 1.0f else DIMMED_ALPHA)
+            icon(context, materialTabIcons[index], x, INFO_TAB_Y.toFloat(), alpha = if (hasContent) 1.0f else DIMMED_ALPHA)
             if (info != null && tab == selectedMaterialTab) arrow(context, x + 0.5f, INFO_TAB_ARROW_Y.toFloat(), pointingUp = false)
         }
     }
@@ -712,7 +800,9 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
         return selectedMaterial?.let { materialInfo[BuiltInRegistries.ITEM.getKey(it)] }
     }
 
-    private fun materialTabAt(x: Number, y: Number): Int? = infoTabAt(x, y)?.takeIf { it < CaracatronMaterialText.TABS.size }
+    private fun materialTabAt(x: Number, y: Number): Int? {
+        return MATERIAL_TAB_X.indices.firstOrNull { inside(x, y, (MATERIAL_TAB_X[it] - 1).toInt(), INFO_TAB_Y - 1, 9, 9) }
+    }
 
     private fun renderInfo(context: GuiGraphics) {
         val pose = context.pose()
@@ -736,7 +826,7 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
             drawScaledText(
                 context = context,
                 font = CobblemonResources.DEFAULT_LARGE,
-                text = Component.literal(entry.species.nationalPokedexNumber.toString().padStart(4, '0')).withStyle(ChatFormatting.BOLD),
+                text = nameMatch(entry, entry.species.nationalPokedexNumber.toString().padStart(4, '0')).withStyle(ChatFormatting.BOLD),
                 x = left + 212 + nameShift,
                 y = top + 41,
                 colour = panelColor
@@ -744,7 +834,7 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
             drawScaledText(
                 context = context,
                 font = CobblemonResources.DEFAULT_LARGE,
-                text = entry.species.translatedName.copy().withStyle(ChatFormatting.BOLD),
+                text = nameMatch(entry, entry.species.translatedName.string).withStyle(ChatFormatting.BOLD),
                 x = left + 236 + nameShift,
                 y = top + 41,
                 colour = panelColor,
@@ -761,7 +851,8 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
             INFO_TABS.forEachIndexed { index, tab ->
                 val hasContent = info != null && hasContent(info, tab)
                 val x = INFO_TAB_X[index]
-                icon(context, tabIcons[index], x.toFloat(), INFO_TAB_Y.toFloat(), alpha = if (hasContent) 1.0f else DIMMED_ALPHA)
+                val lit = hasContent || tab == SNACK_TAB
+                icon(context, tabIcons[index], x.toFloat(), INFO_TAB_Y.toFloat(), alpha = if (lit) 1.0f else DIMMED_ALPHA)
                 if (info != null && tab == selectedTab) {
                     arrow(context, x + 0.5f, INFO_TAB_ARROW_Y.toFloat(), pointingUp = false)
                 }
@@ -785,9 +876,11 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
         pose.scale(SCALE, SCALE, 1.0f)
         lines.forEachIndexed { index, line ->
             val y = (index * INFO_LINE_HEIGHT / SCALE).toInt()
-            val x = if (line.indented) CaracatronInfoLine.ICON_INDENT else 0
-            context.drawString(font, line.text, x, y + line.textOffset, panelTextColor(line.color, panelColor), false)
+            val x = lineX(line)
+            context.drawString(font, line.text, x, y + line.textOffset, panelTextColor(line.color, textColors), false)
             line.item?.let { context.renderItem(stackOf(it), 0, y + INFO_ICON_OFFSET) }
+            line.grid?.let { drawGrid(context, it, y) }
+            line.stages?.render(context, y, if (textColors.darkPanel) STAGE_ON_DARK else STAGE_ON_LIGHT)
         }
         pose.popPose()
         context.disableScissor()
@@ -796,15 +889,112 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
     }
 
     /**
-     * Swaps the info panel's regular text colors (titles and plain text) for the screen color's panel text color, keeping
-     * colors that mean something, like the locked tier warning.
+     * Draws a recipe grid on the info panel, in its scaled space: a faint square per slot with the item icon over it, the
+     * flame of furnace recipes, then the arrow, the result and how many it makes.
+     *
+     * @param y Top of the grid, in font units.
+     */
+    private fun drawGrid(context: GuiGraphics, grid: CaracatronRecipeGrid, y: Int) {
+        val cellColor = when {
+            !textColors.darkPanel -> GRID_CELL_ON_LIGHT
+            showsMaterials -> MATERIALS_GRID_CELL_ON_DARK
+            else -> GRID_CELL_ON_DARK
+        }
+        val left = gridLeft(grid)
+        val cellSize = CaracatronRecipeGrid.CELL_SIZE
+        grid.cells.forEach { cell ->
+            val cellX = left + cell.x
+            val cellY = y + cell.y
+            context.fill(cellX, cellY, cellX + cellSize, cellY + cellSize, cellColor)
+            if (cell.kind == CaracatronRecipeGrid.Kind.FUEL) {
+                val inset = (cellSize - FLAME_SIZE) / 2
+                context.blitSprite(FLAME, cellX + inset, cellY + inset, FLAME_SIZE, FLAME_SIZE)
+            }
+            cell.item?.let { gridIcon(context, it, cellX, cellY) }
+        }
+
+        if (grid.result == null) return
+        drawArrow(context, left + grid.arrowX, y + grid.arrowY, if (textColors.darkPanel) ARROW_ON_DARK else ARROW_ON_LIGHT)
+        val count = "${grid.resultCount}x"
+        val countX = left + grid.resultX + (cellSize - font.width(count)) / 2
+        val countY = y + grid.resultY + cellSize + CaracatronRecipeGrid.COUNT_GAP
+        context.drawString(font, count, countX, countY, panelTextColor(CaracatronSpawnText.TEXT_COLOR, textColors), false)
+    }
+
+    /**
+     * Draws an item icon a bit larger than usual, filling a recipe grid cell but its border.
+     */
+    private fun gridIcon(context: GuiGraphics, item: ResourceLocation, cellX: Int, cellY: Int) {
+        val inset = (CaracatronRecipeGrid.CELL_SIZE - CaracatronRecipeGrid.ICON_SIZE) / 2.0f
+        val pose = context.pose()
+        pose.pushPose()
+        pose.translate(cellX + inset, cellY + inset, 0.0f)
+        pose.scale(CaracatronRecipeGrid.ICON_SIZE / ITEM_SIZE.toFloat(), CaracatronRecipeGrid.ICON_SIZE / ITEM_SIZE.toFloat(), 1.0f)
+        context.renderItem(stackOf(item), 0, 0)
+        pose.popPose()
+    }
+
+    /**
+     * Draws the arrow pointing at a recipe's result: a short bar and a triangle tip.
+     */
+    private fun drawArrow(context: GuiGraphics, x: Int, y: Int, color: Int) {
+        val size = CaracatronRecipeGrid.ARROW_SIZE
+        val tip = size / 2
+        val shaft = size / 7
+        context.fill(x, y + size / 2 - shaft, x + size - tip, y + size / 2 + shaft, color)
+        for (step in 0 until tip) {
+            context.fill(x + size - tip + step, y + step, x + size - tip + step + 1, y + size - step, color)
+        }
+    }
+
+    /**
+     * Left edge of a line's text on the info panel, in font units: after the icon column when indented, or centered.
+     */
+    private fun lineX(line: CaracatronInfoLine): Int = when {
+        line.centered -> (INFO_UNITS - font.width(line.text)) / 2
+        line.indented -> CaracatronInfoLine.ICON_INDENT
+        else -> 0
+    }
+
+    /**
+     * Left edge of a recipe grid on the info panel, in font units, centering it.
+     */
+    private fun gridLeft(grid: CaracatronRecipeGrid): Int = (INFO_UNITS - grid.widthUnits) / 2
+
+    /**
+     * Finds the recipe grid item under the mouse on the info panel: a slot, the side column or the result.
+     *
+     * @param x Mouse x relative to the Caracatron.
+     * @param y Mouse y relative to the Caracatron.
+     * @return The item, [FUEL_SLOT] over a flame, or `null` when the mouse isn't over a filled cell.
+     */
+    private fun gridItemAt(x: Int, y: Int): ResourceLocation? {
+        if (!showsInfoLines() || !inside(x, y, INFO_TEXT_X, INFO_VIEW_TOP, INFO_TEXT_WIDTH, INFO_VIEW_BOTTOM - INFO_VIEW_TOP)) return null
+        if (colorSelect.isOver(x.toDouble(), y.toDouble()) || filterSelect.isOverDrawer(x.toDouble(), y.toDouble())) return null
+        val unitX = (x - INFO_TEXT_X) / SCALE
+        val unitY = (y - INFO_TEXT_TOP + infoScroll.offset) / SCALE
+        val cellSize = CaracatronRecipeGrid.CELL_SIZE
+        infoLines.forEachIndexed { index, line ->
+            val grid = line.grid ?: return@forEachIndexed
+            val gridX = unitX - gridLeft(grid)
+            val gridY = unitY - index * INFO_LINE_HEIGHT / SCALE
+            val cell = grid.cells.firstOrNull { gridX >= it.x && gridX < it.x + cellSize && gridY >= it.y && gridY < it.y + cellSize }
+            if (cell != null) return if (cell.kind == CaracatronRecipeGrid.Kind.FUEL) FUEL_SLOT else cell.item
+        }
+        return null
+    }
+
+    /**
+     * Swaps the info panel's title and plain text colors for the screen color's own, keeping colors that mean something,
+     * like the locked tier warning.
      *
      * @param color RGB color the line was built with.
-     * @param panelColor Panel text color of the screen color, from [CaracatronTextColors].
+     * @param colors Text colors of the screen color.
      */
-    private fun panelTextColor(color: Int, panelColor: Int): Int {
+    private fun panelTextColor(color: Int, colors: CaracatronTextColors): Int {
         return when (color) {
-            CaracatronSpawnText.TITLE_COLOR, CaracatronSpawnText.TEXT_COLOR -> panelColor
+            CaracatronSpawnText.TITLE_COLOR -> colors.title
+            CaracatronSpawnText.TEXT_COLOR -> if (showsMaterials && colors.darkPanel) MATERIALS_DARK_PANEL_TEXT else colors.panel
             else -> color
         }
     }
@@ -821,13 +1011,26 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
         val x = mouseX - left
         val y = mouseY - top
         if (colorSelect.showsTooltip(x.toDouble(), y.toDouble())) {
-            context.renderTooltip(font, Component.translatable("option.caraca_customs.caracatron_color"), mouseX, mouseY)
+            context.renderComponentTooltip(font, CaracatronPages.wheelTooltip(Component.translatable("option.caraca_customs.caracatron_color")), mouseX, mouseY)
             return
         }
-        if (colorSelect.isOver(x.toDouble(), y.toDouble())) return
+        if (colorSelect.isOver(x.toDouble(), y.toDouble()) || filterSelect.isOverDrawer(x.toDouble(), y.toDouble())) return
+
+        gridItemAt(x, y)?.let { item ->
+            when {
+                item == FUEL_SLOT -> context.renderComponentTooltip(font, CaracatronFuels.tooltip(), mouseX, mouseY)
+                showsSnack -> context.renderComponentTooltip(font, itemSourceTooltip(item), mouseX, mouseY)
+                else -> context.renderTooltip(font, stackOf(item).hoverName, mouseX, mouseY)
+            }
+            return
+        }
 
         infoItemAt(x, y)?.let { item ->
-            context.renderTooltip(font, stackOf(item).hoverName, mouseX, mouseY)
+            if (showsSnack) {
+                context.renderComponentTooltip(font, itemSourceTooltip(item), mouseX, mouseY)
+            } else {
+                context.renderTooltip(font, stackOf(item).hoverName, mouseX, mouseY)
+            }
             return
         }
 
@@ -839,12 +1042,17 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
             return
         }
 
+        if (!showsMaterials && inside(x, y, 26, 180, 125, 11)) {
+            context.renderComponentTooltip(font, CaracatronPages.wheelTooltip(filter.tooltip()), mouseX, mouseY)
+            return
+        }
+
         val tooltip: Component? = when {
             inside(x, y, 26, 13, 70, 10) -> Component.translatable(if (data.isShared) "$KEY.tier.world" else "$KEY.tier.player")
             inside(x, y, 251, 13, 34, 10) -> Component.translatable("$KEY.available")
             inside(x, y, 288, 13, 34, 10) -> Component.translatable(if (showingWorld) "$KEY.caught.world" else "$KEY.caught.player")
             inside(x, y, GLOBE_X - 1, GLOBE_Y - 1, 9, 9) -> globeTooltip()
-            inside(x, y, 26, 180, 125, 11) -> if (showsMaterials) Component.translatable("$KEY.materials.count.tooltip") else filter.tooltip()
+            inside(x, y, 26, 180, 125, 11) -> Component.translatable("$KEY.materials.count.tooltip")
             showsMaterials -> materialTabAt(x, y)?.let { Component.translatable("$KEY.materials.tab.${CaracatronMaterialText.TABS[it]}") }
                 ?: materials.getOrNull(slotAt(mouseX.toDouble(), mouseY.toDouble()))?.let { stackOf(it).hoverName }
             else -> infoTabAt(x, y)?.takeIf { showsSpawns }?.let { Component.translatable("$KEY.rarity.${INFO_TABS[it]}") }
@@ -882,6 +1090,7 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
      */
     private fun dropItemAt(x: Int, y: Int): ResourceLocation? {
         if (!showsDrops || !showsInfoLines() || colorSelect.isOver(x.toDouble(), y.toDouble())) return null
+        if (filterSelect.isOverDrawer(x.toDouble(), y.toDouble())) return null
         if (!inside(x, y, INFO_TEXT_X, INFO_VIEW_TOP, INFO_TEXT_WIDTH, INFO_VIEW_BOTTOM - INFO_VIEW_TOP)) return null
         infoItemAt(x, y)?.let { return it }
         val lineY = y - INFO_TEXT_TOP + infoScroll.offset
@@ -914,29 +1123,44 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
     }
 
     /**
-     * Builds the tooltip of the info panel text under the mouse: the biomes of a biome group on the spawn tabs and the
-     * materials page ([CaracatronBiomeTags]), or how to get an item on the snack tab ([CaracatronItemSourceText]). Both
-     * are cached while the screen is open.
+     * Builds the tooltip of the info panel text under the mouse: the biomes of a biome group or of a cut biome list
+     * ([CaracatronBiomeTags]), what the pasture tags of the drops page mean, or how to get an item on the snack tab
+     * ([CaracatronItemSourceText]). Biomes and items are cached while the screen is open.
      *
      * @param x Mouse x relative to the Caracatron.
      * @param y Mouse y relative to the Caracatron.
-     * @return The tooltip lines, or `null` when the mouse isn't over a biome group or an item.
+     * @return The tooltip lines, or `null` when the mouse isn't over text with a tooltip.
      */
     private fun infoTooltipAt(x: Int, y: Int): List<Component>? {
         val insertion = insertionAt(x, y) ?: return null
-        if (insertion.startsWith("#")) return biomeTooltips.getOrPut(insertion) { CaracatronBiomeTags.tooltip(insertion).orEmpty() }
-        if (!insertion.startsWith(CaracatronSnackText.ITEM_INSERTION)) return null
-
-        val item = ResourceLocation.tryParse(insertion.removePrefix(CaracatronSnackText.ITEM_INSERTION)) ?: return null
-        return itemTooltips.getOrPut(item) {
-            val source = selected?.let { spawnInfo[it.species.resourceIdentifier] }?.itemSources?.firstOrNull { it.item == item }
-            CaracatronItemSourceText.tooltip(item, source)
+        return when {
+            insertion.startsWith("#") -> biomeTooltips.getOrPut(insertion) { CaracatronBiomeTags.tooltip(insertion).orEmpty() }
+            insertion.startsWith(CaracatronMaterialText.MORE_BIOMES) -> biomeTooltips.getOrPut(insertion) {
+                CaracatronBiomeTags.listTooltip(insertion.removePrefix(CaracatronMaterialText.MORE_BIOMES).split(CaracatronMaterialText.BIOME_SEPARATOR))
+            }
+            insertion.startsWith(CaracatronDropText.PASTURE_INSERTION) -> {
+                val key = insertion.removePrefix(CaracatronDropText.PASTURE_INSERTION)
+                listOf(Component.translatable("text.caraca_customs.caracatron.drops.$key.tooltip"))
+            }
+            insertion.startsWith(CaracatronSnackText.ITEM_INSERTION) -> {
+                val item = ResourceLocation.tryParse(insertion.removePrefix(CaracatronSnackText.ITEM_INSERTION)) ?: return null
+                itemSourceTooltip(item)
+            }
+            else -> null
         }
     }
 
     /**
-     * Finds the text under the mouse on the info panel, by measuring the hovered line up to the mouse, and reads the
-     * insertion its style carries ([CaracatronSpawnText.biomeName], [CaracatronSnackText.ITEM_INSERTION]).
+     * Builds how to get an item of the snack tab ([CaracatronItemSourceText]), cached while the screen is open.
+     */
+    private fun itemSourceTooltip(item: ResourceLocation): List<Component> = itemTooltips.getOrPut(item) {
+        val source = selected?.let { spawnInfo[it.species.resourceIdentifier] }?.itemSources?.firstOrNull { it.item == item }
+        CaracatronItemSourceText.tooltip(item, source)
+    }
+
+    /**
+     * Finds the text under the mouse on the info panel, by measuring the hovered line up to the mouse (lines drawn lower
+     * by [CaracatronInfoLine.textOffset] included), and reads the insertion its style carries ([CaracatronSpawnText.biomeName], [CaracatronSnackText.ITEM_INSERTION]).
      *
      * @param x Mouse x relative to the Caracatron.
      * @param y Mouse y relative to the Caracatron.
@@ -947,9 +1171,15 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
         if (!inside(x, y, INFO_TEXT_X, INFO_VIEW_TOP, INFO_TEXT_WIDTH, INFO_VIEW_BOTTOM - INFO_VIEW_TOP)) return null
 
         val lineY = y - INFO_TEXT_TOP + infoScroll.offset
-        if (lineY < 0 || lineY % INFO_LINE_HEIGHT >= font.lineHeight * SCALE) return null
-        val line = infoLines.getOrNull((lineY / INFO_LINE_HEIGHT).toInt()) ?: return null
-        val textX = ((x - INFO_TEXT_X) / SCALE).toInt() - if (line.indented) CaracatronInfoLine.ICON_INDENT else 0
+        if (lineY < 0) return null
+        val index = (lineY / INFO_LINE_HEIGHT).toInt()
+        val line = listOf(index, index - 1).firstNotNullOfOrNull { lineIndex ->
+            infoLines.getOrNull(lineIndex)?.takeIf { line ->
+                val textY = lineY - lineIndex * INFO_LINE_HEIGHT - line.textOffset * SCALE
+                textY >= 0 && textY < font.lineHeight * SCALE
+            }
+        } ?: return null
+        val textX = ((x - INFO_TEXT_X) / SCALE).toInt() - lineX(line)
         val style = font.splitter.componentStyleAtWidth(line.text, textX) ?: return null
         return style.insertion
     }
@@ -968,11 +1198,23 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
                 playClick()
                 return true
             }
+            if (!showsMaterials && filterSelect.mouseClicked(x, y, filters, filter)) {
+                playClick()
+                return true
+            }
             if (navigation.mouseClicked(x, y)) return true
             if (listScroll.startDrag(x, y) || infoScroll.startDrag(x, y)) return true
             dropItemAt(x.toInt(), y.toInt())?.let { item ->
                 searchBox.value = item.toString()
                 playClick()
+                return true
+            }
+            gridItemAt(x.toInt(), y.toInt())?.takeIf { it != FUEL_SLOT }?.let { item ->
+                openMaterial(item)
+                return true
+            }
+            linkAt(x.toInt(), y.toInt())?.takeIf { it.startsWith(CaracatronSnackText.ITEM_INSERTION) }?.let { link ->
+                ResourceLocation.tryParse(link.removePrefix(CaracatronSnackText.ITEM_INSERTION))?.let(::openMaterial)
                 return true
             }
 
@@ -1020,12 +1262,13 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
     }
 
     override fun mouseDragged(mouseX: Double, mouseY: Double, button: Int, deltaX: Double, deltaY: Double): Boolean {
-        if (colorSelect.drag(deltaY) || listScroll.drag(deltaY) || infoScroll.drag(deltaY)) return true
+        if (colorSelect.drag(deltaY) || filterSelect.drag(deltaY) || listScroll.drag(deltaY) || infoScroll.drag(deltaY)) return true
         return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY)
     }
 
     override fun mouseReleased(mouseX: Double, mouseY: Double, button: Int): Boolean {
         colorSelect.stopDrag()
+        filterSelect.stopDrag()
         listScroll.stopDrag()
         infoScroll.stopDrag()
         return super.mouseReleased(mouseX, mouseY, button)
@@ -1035,6 +1278,11 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
         val x = mouseX - left
         val y = mouseY - top
         if (colorSelect.mouseScrolled(x, y, scrollY)) return true
+        if (filterSelect.mouseScrolled(x, y, scrollY)) return true
+        if (navigation.mouseScrolled(x, y, scrollY)) return true
+        if (!showsMaterials && scrollY != 0.0 && inside(x, y, BAR_X, CATEGORY_BAR_Y, BAR_WIDTH, BAR_HEIGHT)) {
+            return changeFilter(if (scrollY > 0) -1 else 1)
+        }
         when {
             inside(x, y, LIST_X, LIST_TOP, LIST_RIGHT - LIST_X + 6, LIST_BOTTOM - LIST_TOP) -> listScroll.scrollBy(-scrollY * SLOT_STEP)
             inside(x, y, INFO_X, INFO_VIEW_TOP, INFO_WIDTH, INFO_VIEW_BOTTOM - INFO_VIEW_TOP) -> infoScroll.scrollBy(-scrollY * INFO_LINE_HEIGHT * 2)
@@ -1072,8 +1320,7 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
     }
 
     /**
-     * Opens the other materials tab when the open one has nothing for the item and the other one does, like the spawn
-     * rarities do.
+     * Opens the first materials tab with content when the open one has nothing for the item, like the spawn rarities do.
      */
     private fun pickMaterialTab(info: CaracatronMaterialInfoPayload) {
         val content = materialTabsWithContent(info)
@@ -1088,17 +1335,82 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
      */
     private fun materialTabsWithContent(info: CaracatronMaterialInfoPayload): List<Boolean> = materialTabContent.getOrPut(info.item) {
         val dropping = dropIndex.holderCount(info.item)
-        CaracatronMaterialText.TABS.map { CaracatronMaterialText.hasContent(info, it, dropping) }
+        val stages = stagesOf(info)
+        CaracatronMaterialText.TABS.map { CaracatronMaterialText.hasContent(info, it, dropping, stages) }
     }
 
     /**
-     * Opens the drops page searching an item, from the Pokémon drops link of the materials page.
+     * Growth stages of an item of the materials page, worked out once per item ([CaracatronGrowthStages.of]).
+     */
+    private fun stagesOf(info: CaracatronMaterialInfoPayload): CaracatronGrowthStages? = materialStages.getOrPut(info.item) {
+        CaracatronGrowthStages.of(info.item, info.blocks.map { it.block })
+    }
+
+    /**
+     * Opens the drops page searching an item, from the Pokémon drops link of the materials page, and selects the first
+     * Pokémon of the list.
      *
-     * @param item Item id, searched as is (e.g. `minecraft:emerald`).
+     * @param item Item id, searched as is (like `minecraft:emerald`).
      */
     private fun searchDrops(item: String) {
         searches[CaracatronPage.DROPS] = item
         CaracatronPages.open(CaracatronPage.DROPS, this)
+        filtered.firstOrNull()?.let(::select)
+    }
+
+    /**
+     * Color of the materials page link to the drops page: the label color, or a brighter one while it's hovered.
+     */
+    private fun linkColor(): Int = if (hoveredLink?.startsWith(CaracatronMaterialText.DROPS_LINK) == true) textColors.linkHover else textColors.label
+
+    /**
+     * Finds the link under the mouse on the info panel: the drops link of the materials page, or an item name of the
+     * snack tab.
+     *
+     * @param x Mouse x relative to the Caracatron.
+     * @param y Mouse y relative to the Caracatron.
+     * @return The link's insertion, or `null` when the mouse isn't over one, or a drawer covers it.
+     */
+    private fun linkAt(x: Int, y: Int): String? {
+        if (colorSelect.isOver(x.toDouble(), y.toDouble()) || filterSelect.isOverDrawer(x.toDouble(), y.toDouble())) return null
+        val insertion = insertionAt(x, y) ?: return null
+        return when {
+            showsMaterials && insertion.startsWith(CaracatronMaterialText.DROPS_LINK) -> insertion
+            showsSnack && insertion.startsWith(CaracatronSnackText.ITEM_INSERTION) -> insertion
+            else -> null
+        }
+    }
+
+    /**
+     * Opens an item on the materials page, from the snack tab or a recipe grid: searches its id, selects it and goes back
+     * to the natural generation tab.
+     *
+     * @param id Item id.
+     */
+    private fun openMaterial(id: ResourceLocation) {
+        val item = BuiltInRegistries.ITEM.getOptional(id).orElse(null) ?: return
+        searches[CaracatronPage.MATERIALS] = id.toString()
+        selectedMaterialTab = CaracatronMaterialText.WORLD
+        selectedMaterial = item
+        infoScroll.reset()
+        if (showsMaterials) {
+            searchBox.value = id.toString()
+            requestMaterialInfo(item)
+            CaracatronPages.playClick()
+        } else {
+            CaracatronPages.open(CaracatronPage.MATERIALS, this)
+        }
+        pendingScroll = true
+    }
+
+    /**
+     * Scrolls the list to the selected species or item, once the list knows its size. Used when the Caracatron opens on
+     * its last selection and when an item is opened from another page.
+     */
+    private fun scrollToSelection() {
+        pendingScroll = false
+        val index = if (showsMaterials) materials.indexOf(selectedMaterial) else filtered.indexOf(selected)
+        if (index > 0) listScroll.scrollBy((index / COLUMNS * SLOT_STEP).toDouble())
     }
 
     private fun selectMaterialTab(tab: String) {
@@ -1163,7 +1475,9 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
             val material = selectedMaterial ?: return
             val id = BuiltInRegistries.ITEM.getKey(material)
             val info = materialInfo[id] ?: return
-            infoLines = CaracatronMaterialText.lines(info, selectedMaterialTab, dropIndex.holderCount(id), textColors.label, font, width)
+            infoLines = CaracatronMaterialText.lines(
+                info, selectedMaterialTab, dropIndex.holderCount(id), stagesOf(info), textColors.label, linkColor(), font, width
+            )
             return
         }
         val entry = selected ?: return
@@ -1173,16 +1487,19 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
         }
         val info = spawnInfo[entry.species.resourceIdentifier] ?: return
         infoLines = if (selectedTab == SNACK_TAB) {
-            CaracatronSnackText.lines(info, entry.species, font, width)
+            val hoveredItem = hoveredLink?.takeIf { showsSnack }?.removePrefix(CaracatronSnackText.ITEM_INSERTION)?.let(ResourceLocation::tryParse)
+            CaracatronSnackText.lines(info, entry.species, hoveredItem, textColors.linkHover, font, width)
         } else {
             CaracatronSpawnText.lines(info, selectedTab, data.tier, font, width)
         }
     }
 
     private fun changeFilter(step: Int): Boolean {
-        val next = (filterIndex + step).coerceIn(0, filters.lastIndex)
-        if (next != filterIndex) {
-            filterIndex = next
+        val available = filters
+        val index = available.indexOf(filter).coerceAtLeast(0)
+        val next = (index + step).coerceIn(0, available.lastIndex)
+        if (next != index) {
+            filter = available[next]
             updateFilter()
             playClick()
         }
@@ -1191,8 +1508,12 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
 
     /**
      * Lists the species of the selected filter matching the search: by name or dex number on the Caracatron page, by the
-     * items they drop on the drops page ([CaracatronDropIndex]), where an empty search lists every species. The materials
+     * items they drop on the drops page ([CaracatronDropIndex]), plus the ones whose name or number matches, where an empty
+     * search lists every species. The materials
      * page lists the items matching the search instead ([CaracatronMaterialIndex]).
+     *
+     * "By biggest drop" puts first the species dropping the most of the searched items, by average amount times chance.
+     * It goes away with the search, and the list falls back to "All by tier".
      */
     private fun updateFilter() {
         val query = normalize(searchBox.value.trim())
@@ -1202,6 +1523,8 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
             listScroll.reset()
             return
         }
+        dropQuery = if (showsDrops) query else ""
+        if (filter !in filters) filter = CaracatronFilter.AllByTier
         val current = filter
         val matching = if (showsDrops && query.isNotEmpty()) {
             val result = dropIndex.search(query)
@@ -1209,16 +1532,51 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
                 matchedItems = result.items
                 rebuildInfo()
             }
-            entries.filter { current.accepts(it.tier) && result.species[it.index] }
+            dropSpecies = result.species
+            entries.filter { current.accepts(it.tier) && (result.species[it.index] || matchesSearch(it, query)) }
         } else {
+            dropSpecies = null
             if (matchedItems.isNotEmpty()) {
                 matchedItems = emptySet()
                 rebuildInfo()
             }
             entries.filter { current.accepts(it.tier) && (showsDrops || matchesSearch(it, query)) }
         }
-        filtered = if (current.sortsByTier) matching.sortedBy { it.tier } else matching
+        filtered = when {
+            current == CaracatronFilter.ByDrop -> matching.sortedByDescending { dropIndex.bestDrop(it.index, matchedItems) }
+            current.sortsByTier -> matching.sortedBy { it.tier }
+            else -> matching
+        }
         listScroll.reset()
+    }
+
+    /**
+     * Writes the selected species' name or dex number, with the part matching the drops page search underlined in the
+     * match green when the species is listed for its name or number rather than for a drop.
+     *
+     * @param entry Selected species.
+     * @param text Name or four digit dex number.
+     */
+    private fun nameMatch(entry: Entry, text: String): MutableComponent {
+        val drops = dropSpecies
+        if (!showsDrops || dropQuery.isEmpty() || drops == null || drops[entry.index]) return Component.literal(text)
+
+        val normalized = StringBuilder()
+        val origin = mutableListOf<Int>()
+        text.forEachIndexed { index, char ->
+            val piece = normalize(char.toString())
+            repeat(piece.length) { origin += index }
+            normalized.append(piece)
+        }
+        val at = normalized.indexOf(dropQuery)
+        if (at < 0) return Component.literal(text)
+
+        val from = origin[at]
+        val to = origin[at + dropQuery.length - 1] + 1
+        val match = textColors.match
+        return Component.literal(text.substring(0, from))
+            .append(Component.literal(text.substring(from, to)).withStyle { it.withColor(match).withUnderlined(true) })
+            .append(text.substring(to))
     }
 
     /**
@@ -1305,10 +1663,11 @@ class CaracatronScreen(private val data: CaracatronOpenPayload) : Screen(Compone
     }
 
     /**
-     * Writes a bold text in Cobblemon's large font on the screen itself, in the screen color's text color and shadow.
+     * Writes a bold text in Cobblemon's large font on the header or the filter bar, always white.
      */
     private fun largeText(context: GuiGraphics, text: MutableComponent, x: Int, y: Int) {
-        textColors.drawScreenText(context, text.withStyle(ChatFormatting.BOLD), left + x, top + y, font = CobblemonResources.DEFAULT_LARGE)
+        val bold = text.withStyle(ChatFormatting.BOLD)
+        CaracatronTextColors.drawHeaderText(context, bold, left + x, top + y, font = CobblemonResources.DEFAULT_LARGE)
     }
 
     private fun playClick() {

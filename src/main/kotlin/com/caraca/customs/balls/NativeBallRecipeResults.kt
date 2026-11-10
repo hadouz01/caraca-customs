@@ -5,13 +5,11 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.world.item.ItemStack
 
 /**
- * Swaps crafting results that are Cobblemon balls replaced by a custom ball (same path, like `cobblemon:poke_ball` and
- * `caraca_customs:poke_ball`) for the custom ball, while [Feature.CUSTOM_BALLS] is enabled.
+ * Makes recipes that craft a Cobblemon ball replaced by a custom one (same path, like `cobblemon:poke_ball`) craft the
+ * custom ball instead, while [Feature.CUSTOM_BALLS] is on.
  *
- * The built-in `caraca_recipe_overrides` pack already replaces Cobblemon's recipes, but any pack loaded above it (another
- * mod, a modpack or a world datapack) can bring Cobblemon's originals back. Applied by `ShapedRecipeResultMixin`, this
- * keeps those recipes crafting the custom balls no matter where they come from. Balls without a replacement, like the
- * Great Ball, are left alone, and nothing changes while this mod's custom balls are off.
+ * `caraca_recipe_overrides` already replaces Cobblemon's recipes, but a pack loaded above it can bring them back, so
+ * `ShapedRecipeResultMixin` swaps the result no matter where the recipe comes from.
  *
  * @author hadouz01
  * @since 1.9.0

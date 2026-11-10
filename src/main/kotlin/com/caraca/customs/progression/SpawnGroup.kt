@@ -54,7 +54,7 @@ enum class SpawnGroup(
         /**
          * Looks up a group by its identifier.
          *
-         * @param id Group identifier, e.g. `stage_1_low`.
+         * @param id Group identifier, like `stage_1_low`.
          * @return The matching group, or `null` if none.
          */
         fun byId(id: String): SpawnGroup? = BY_ID[id.lowercase()]

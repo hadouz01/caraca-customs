@@ -1,0 +1,17 @@
+{
+    "fabric:load_conditions": [
+        { "condition": "caraca_customs:feature_enabled", "feature": "custom_balls" }
+    ],
+    "type": "minecraft:crafting_shapeless",
+    "category": "equipment",
+    "group": "caraca_ancient_ultra_balls",
+    "ingredients": [
+        { "item": "caraca_customs:ancient_ultra_verdant_ball" },
+        { "item": "cobblemon:yellow_apricorn" },
+        { "item": "cobblemon:yellow_apricorn" }
+    ],
+    "result": {
+        "count": 1,
+        "id": "caraca_customs:ancient_ultra_lime_ball"
+    }
+}

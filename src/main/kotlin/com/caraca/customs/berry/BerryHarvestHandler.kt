@@ -19,13 +19,12 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper
 import net.minecraft.world.item.enchantment.Enchantments
 
 /**
- * Event listener handling berry yield recalculations, Rich Mulch yield boosts,
- * mulch consumption and Hoe Fortune bonus drops.
+ * Berry yields, Rich Mulch, mulch uses and Hoe Fortune drops.
  *
- * - [BerryYieldCalculationEvent]: applies configured yield bounds and Rich Mulch, then consumes one mulch use.
- * - [BerryHarvestEvent]: appends Hoe Fortune bonus drops, since it is the only event that carries the harvesting player.
+ * - [BerryYieldCalculationEvent]: applies the configured yield and Rich Mulch, then uses up one mulch use.
+ * - [BerryHarvestEvent]: adds the Hoe Fortune drops, since it's the only event that knows who's harvesting.
  *
- * Both handlers do nothing while [Feature.BERRY_MECHANICS] is disabled.
+ * Both do nothing while [Feature.BERRY_MECHANICS] is off.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -35,7 +34,7 @@ object BerryHarvestHandler {
     private const val RICH_MULCH_YIELD_BOOST = 3
 
     /**
-     * Registers the berry yield and harvest subscribers into Cobblemon's event bus.
+     * Registers the yield and harvest listeners on Cobblemon's events.
      */
     fun register() {
         CobblemonEvents.BERRY_YIELD.subscribe { event -> handleBerryYield(event) }
@@ -45,7 +44,7 @@ object BerryHarvestHandler {
     /**
      * Replaces the native yield with the configured bounds, applies Rich Mulch and consumes one mulch use.
      *
-     * @param event Target yield calculation event context.
+     * @param event Yield calculation event context.
      */
     private fun handleBerryYield(event: BerryYieldCalculationEvent) {
         if (!Feature.BERRY_MECHANICS.isEnabled) return
@@ -61,7 +60,7 @@ object BerryHarvestHandler {
     /**
      * Appends extra berries to the harvest drops based on the player's held Fortune hoe.
      *
-     * @param event Target harvest event context.
+     * @param event Harvest event context.
      */
     private fun handleBerryHarvest(event: BerryHarvestEvent) {
         if (!Feature.BERRY_MECHANICS.isEnabled) return
@@ -73,12 +72,11 @@ object BerryHarvestHandler {
     }
 
     /**
-     * Calculates the base berry quantity using the configured bounds, boosted by Rich Mulch
-     * and capped at [DynamicConfig.MAX_YIELD_CAP].
+     * Rolls the base berry amount within the configured bounds, boosted by Rich Mulch and capped at
+     * [DynamicConfig.MAX_YIELD_CAP].
      *
-     * @param config Resolved berry configuration.
-     * @param isRichMulch Indicates whether the active mulch is [MulchVariant.RICH].
-     * @return Calculated yield quantity.
+     * @param config Settings of the berry.
+     * @param isRichMulch Whether the berry has Rich Mulch.
      */
     private fun calculateBaseYield(config: BerryConfigEntry, isRichMulch: Boolean): Int {
         val boost = if (isRichMulch) RICH_MULCH_YIELD_BOOST else 0
@@ -89,11 +87,11 @@ object BerryHarvestHandler {
     }
 
     /**
-     * Rolls one chance per Fortune level of the held hoe to add an extra berry.
+     * Rolls one chance per Fortune level of the held hoe for an extra berry.
      *
-     * @param entity The entity performing the harvest.
-     * @param random World random instance used for chance rolls.
-     * @return Number of extra berries to drop.
+     * @param entity Entity harvesting.
+     * @param random Random used for the rolls.
+     * @return How many extra berries drop.
      */
     private fun calculateHoeFortuneBonus(entity: LivingEntity, random: RandomSource): Int {
         val hoeStack = resolveHeldHoe(entity) ?: return 0
@@ -106,7 +104,7 @@ object BerryHarvestHandler {
     /**
      * Finds a held [HoeItem] stack, checking the main hand first and the offhand second.
      *
-     * @param entity Target entity holding the item.
+     * @param entity Entity holding the item.
      * @return Matching hoe stack, or `null` if none is held.
      */
     private fun resolveHeldHoe(entity: LivingEntity): ItemStack? {
@@ -119,7 +117,7 @@ object BerryHarvestHandler {
      * Queries the Fortune enchantment level of an item stack.
      *
      * @param entity Entity providing registry access.
-     * @param stack Target item stack.
+     * @param stack Item stack.
      * @return Fortune level, or 0 if absent.
      */
     private fun resolveFortuneLevel(entity: LivingEntity, stack: ItemStack): Int {

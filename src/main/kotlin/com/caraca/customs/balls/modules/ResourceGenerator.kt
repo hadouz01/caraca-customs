@@ -6,12 +6,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Development-only generator for item models and Cobblemon Poké Ball variation files.
+ * Dev-only generator for the balls' item models and Cobblemon variation files.
  *
- * Runs only inside a development environment, writing into the project's source tree and, when present,
- * the build resources directory. The project root is resolved as the parent of the game directory (`run/`),
- * so production game and server folders are never written to. Only missing files are created: existing,
- * possibly hand-edited assets are left untouched.
+ * It only runs in a development environment and writes to the project folder (the parent of `run/`), so real game
+ * folders are never touched. Only missing files are created, so hand-edited assets stay as they are.
  *
  * @author hadouz01
  * @since 1.0.0

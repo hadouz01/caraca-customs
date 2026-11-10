@@ -5,6 +5,7 @@ import com.caraca.customs.network.CaracatronMaterialInfoPayload
 import com.caraca.customs.network.CaracatronMaterialLoot
 import com.caraca.customs.network.CaracatronMaterialSpot
 import com.caraca.customs.network.CaracatronMaterialStructure
+import com.caraca.customs.network.CaracatronRecipe
 import net.minecraft.ChatFormatting
 import net.minecraft.client.gui.Font
 import net.minecraft.core.registries.BuiltInRegistries
@@ -15,18 +16,11 @@ import net.minecraft.util.FormattedCharSequence
 import net.minecraft.world.item.Items
 
 /**
- * Turns where an item comes from into the lines of the Caracatron's materials page, split in two tabs like the spawn
- * rarities:
+ * Lines of the materials page, in four tabs: [WORLD] (natural generation, growth stages, berries and Pokémon drops),
+ * [STRUCTURES] (structures and chests), [RECIPES] and [DIGGING] (brushing).
  *
- * - [WORLD]: every generated block that is the item, or drops it when mined, with its icon, then each place it generates
- *   in naturally (dimension, biomes, and for ores the altitude, how often and how big the veins are), followed by where
- *   a berry grows, its mutations, a recipe making the item and how many Pokémon drop it, which links to the drops page.
- * - [STRUCTURES]: the same blocks with every structure they're part of, then the suspicious blocks dug up with a brush
- *   and the chests holding the item, grouped by the structure or feature placing them, with its biomes.
- *
- * Each line's label (the dimension, "Altitude:", the structure...) is bold and in the screen color's label color
- * ([CaracatronTextColors.label]), apart from the section titles. Biome groups carry their tag as style insertion
- * ([CaracatronSpawnText.biomeName]), so hovering them lists their biomes, like on the spawn tabs.
+ * Line labels are bold in [CaracatronTextColors.label], and biome groups keep their tag as style insertion so they can
+ * be hovered. Biome lists show [MAX_BIOMES] biomes, the rest goes in the tooltip of their last line.
  *
  * @author hadouz01
  * @since 1.27.0
@@ -34,19 +28,29 @@ import net.minecraft.world.item.Items
 object CaracatronMaterialText {
 
     /**
-     * Tab of natural generation: biomes, altitude, frequency, plus recipes, berries and Pokémon drops.
+     * Tab of natural generation: growth stages, biomes, altitude, frequency, plus berries and Pokémon drops.
      */
     const val WORLD = "world"
 
     /**
-     * Tab of structures: blocks they're built with, brushing and chests.
+     * Tab of structures: blocks they're built with and their chests.
      */
     const val STRUCTURES = "structures"
 
     /**
+     * Tab of every recipe making the item.
+     */
+    const val RECIPES = "recipes"
+
+    /**
+     * Tab of what's dug up with a brush.
+     */
+    const val DIGGING = "digging"
+
+    /**
      * Tabs in the order of their icons.
      */
-    val TABS = listOf(WORLD, STRUCTURES)
+    val TABS = listOf(WORLD, STRUCTURES, RECIPES, DIGGING)
 
     /**
      * Style insertion of the Pokémon drops line, followed by the item id: clicking it opens the drops page searching
@@ -54,28 +58,57 @@ object CaracatronMaterialText {
      */
     const val DROPS_LINK = "drops:"
 
+    /**
+     * Style insertion of the last line of a cut biome list, followed by the biomes left out, split by [BIOME_SEPARATOR].
+     */
+    const val MORE_BIOMES = "biomes:"
+
+    /**
+     * Separator of the biomes in a [MORE_BIOMES] insertion.
+     */
+    const val BIOME_SEPARATOR = ";"
+
     private const val KEY = "text.caraca_customs.caracatron.materials"
-    private const val INDENT = "  "
+    private const val BULLET = "• "
+    private const val SUB_BULLET = "  ◦ "
+    private const val MAX_BIOMES = 6
+
+    /**
+     * Recipe types merged when they share their ingredients.
+     */
+    private val COOKING_TYPES = setOf("minecraft:smelting", "minecraft:blasting", "minecraft:smoking", "minecraft:campfire_cooking")
+
+    /**
+     * Recipe types that burn fuel, shown with a flame under their ingredient.
+     */
+    private val FUEL_TYPES = setOf("minecraft:smelting", "minecraft:blasting", "minecraft:smoking")
+    private val OVERWORLD = ResourceLocation.withDefaultNamespace("overworld")
+    private val BRUSH = BuiltInRegistries.ITEM.getKey(Items.BRUSH)
 
     /**
      * Whether a tab has anything to show for an item.
      *
      * @param info Where the item comes from.
-     * @param tab [WORLD] or [STRUCTURES].
+     * @param tab One of [TABS].
      * @param droppingSpecies How many listed Pokémon drop the item.
+     * @param stages Growth stages of the item, `null` when it isn't a plant.
      */
-    fun hasContent(info: CaracatronMaterialInfoPayload, tab: String, droppingSpecies: Int): Boolean {
-        if (tab == STRUCTURES) return info.blocks.any { it.structures.isNotEmpty() } || info.loot.isNotEmpty()
-        return info.blocks.any { it.spots.isNotEmpty() } || sourceLines(info, 0).isNotEmpty() || droppingSpecies > 0
+    fun hasContent(info: CaracatronMaterialInfoPayload, tab: String, droppingSpecies: Int, stages: CaracatronGrowthStages?): Boolean = when (tab) {
+        STRUCTURES -> info.blocks.any { it.structures.isNotEmpty() } || info.loot.any { it.kind == CaracatronMaterialLoot.CHEST }
+        RECIPES -> info.source.recipes.isNotEmpty()
+        DIGGING -> info.loot.any { it.kind == CaracatronMaterialLoot.BRUSH }
+        else -> info.blocks.any { it.spots.isNotEmpty() } || sourceLines(info, 0).isNotEmpty() || droppingSpecies > 0 || stages != null
     }
 
     /**
      * Builds and wraps the lines of a tab.
      *
      * @param info Where the item comes from, sent by the server.
-     * @param tab [WORLD] or [STRUCTURES].
+     * @param tab One of [TABS].
      * @param droppingSpecies How many listed Pokémon drop the item.
-     * @param labelColor RGB color of the labels and the drops page link ([CaracatronTextColors.label]).
+     * @param stages Growth stages of the item, `null` when it isn't a plant.
+     * @param labelColor RGB color of the labels ([CaracatronTextColors.label]).
+     * @param linkColor RGB color of the drops page link, brighter while it's hovered.
      * @param font Font used to wrap the lines.
      * @param width Wrapping width, in font units.
      * @return The wrapped lines, blank ones included as spacing.
@@ -84,66 +117,122 @@ object CaracatronMaterialText {
         info: CaracatronMaterialInfoPayload,
         tab: String,
         droppingSpecies: Int,
+        stages: CaracatronGrowthStages?,
         labelColor: Int,
+        linkColor: Int,
         font: Font,
         width: Int
     ): List<CaracatronInfoLine> {
-        val lines = mutableListOf<CaracatronInfoLine>()
+        val out = CaracatronInfoLines(font, width)
+        when (tab) {
+            STRUCTURES -> structureTab(info, labelColor, font, width, out)
+            RECIPES -> recipeTab(info, labelColor, out)
+            DIGGING -> diggingTab(info, labelColor, font, width, out)
+            else -> worldTab(info, droppingSpecies, stages, labelColor, linkColor, font, width, out)
+        }
+        return out.lines
+    }
 
-        fun add(component: Component, color: Int = CaracatronSpawnText.TEXT_COLOR) {
-            font.split(component, width).forEach { lines += CaracatronInfoLine(it, color) }
+    private fun worldTab(
+        info: CaracatronMaterialInfoPayload,
+        droppingSpecies: Int,
+        stages: CaracatronGrowthStages?,
+        labelColor: Int,
+        linkColor: Int,
+        font: Font,
+        width: Int,
+        out: CaracatronInfoLines
+    ) {
+        if (stages != null) {
+            title(out, "stages")
+            out.stages(stages)
+            out.space()
         }
 
-        fun space() {
-            lines += CaracatronInfoLine(FormattedCharSequence.EMPTY, CaracatronSpawnText.TEXT_COLOR)
-        }
-
-        fun title(key: String) = add(tr(key).withStyle(ChatFormatting.BOLD), CaracatronSpawnText.TITLE_COLOR)
-
-        if (tab == STRUCTURES) {
-            info.blocks.filter { it.structures.isNotEmpty() }.forEach { block ->
-                blockTitle(block, if (block.dropsItem) "block.drops_structures" else "block.structures", font, width, lines)
-                block.structures.forEach { structure -> structureLines(structure, labelColor).forEach(::add) }
-                space()
-            }
-
-            listOf(CaracatronMaterialLoot.BRUSH to "loot.brush", CaracatronMaterialLoot.CHEST to "loot.chest").forEach { (kind, key) ->
-                val loot = info.loot.filter { it.kind == kind }
-                if (loot.isEmpty()) return@forEach
-                title(key)
-                lootGroups(loot).forEach { group -> lootLines(group, kind == CaracatronMaterialLoot.BRUSH, labelColor).forEach(::add) }
-                val unplaced = loot.filter { it.place == null }.map { Component.literal(CaracatronSpawnText.readable(it.table.path)) }.distinctBy { it.string }
-                if (unplaced.isNotEmpty()) {
-                    add(Component.literal("- ").append(label(tr("label.other"), labelColor)).append(" ").append(CaracatronSpawnText.join(unplaced)))
-                }
-                space()
-            }
-
-            if (lines.isEmpty()) add(tr("none_structures"))
-            return lines
+        if (droppingSpecies > 0) {
+            val link = "$DROPS_LINK${info.item}"
+            val text = tr("pokemon", droppingSpecies).withStyle { it.withBold(true).withUnderlined(true).withColor(linkColor).withInsertion(link) }
+            out.add(text, centered = true)
+            out.space()
         }
 
         info.blocks.filter { it.spots.isNotEmpty() }.forEach { block ->
-            blockTitle(block, if (block.dropsItem) "block.drops" else "block.self", font, width, lines)
-            block.spots.forEach { spot -> spotLines(spot, labelColor).forEach(::add) }
-            space()
+            blockTitle(block, if (block.dropsItem) "block.drops" else "block.self", font, width, out.lines)
+            block.spots.forEach { spot ->
+                out.space()
+                spotLines(spot, labelColor).forEach(out::add)
+            }
+            out.space()
         }
 
         val source = sourceLines(info, labelColor)
         if (source.isNotEmpty()) {
-            title("other")
-            source.forEach(::add)
-            space()
+            title(out, "other")
+            source.forEach(out::add)
+            out.space()
         }
 
-        if (droppingSpecies > 0) {
-            add(tr("pokemon", droppingSpecies).withStyle { it.withUnderlined(true).withColor(labelColor).withInsertion("$DROPS_LINK${info.item}") })
-            space()
-        }
-
-        if (lines.isEmpty()) add(tr("none"))
-        return lines
+        if (out.lines.isEmpty()) out.add(tr("none"))
     }
+
+    private fun structureTab(info: CaracatronMaterialInfoPayload, labelColor: Int, font: Font, width: Int, out: CaracatronInfoLines) {
+        info.blocks.filter { it.structures.isNotEmpty() }.forEach { block ->
+            blockTitle(block, if (block.dropsItem) "block.drops_structures" else "block.structures", font, width, out.lines)
+            block.structures.forEach { structure ->
+                out.space()
+                structureLines(structure, labelColor).forEach(out::add)
+            }
+            out.space()
+        }
+
+        lootSection(info.loot.filter { it.kind == CaracatronMaterialLoot.CHEST }, false, labelColor, out) { title(out, "loot.chest") }
+        if (out.lines.isEmpty()) out.add(tr("none_structures"))
+    }
+
+    private fun diggingTab(info: CaracatronMaterialInfoPayload, labelColor: Int, font: Font, width: Int, out: CaracatronInfoLines) {
+        lootSection(info.loot.filter { it.kind == CaracatronMaterialLoot.BRUSH }, true, labelColor, out) {
+            iconTitle(BRUSH, tr("loot.brush").withStyle(ChatFormatting.BOLD), font, width, out.lines)
+        }
+        if (out.lines.isEmpty()) out.add(tr("none_digging"))
+    }
+
+    private fun recipeTab(info: CaracatronMaterialInfoPayload, labelColor: Int, out: CaracatronInfoLines) {
+        merged(info.source.recipes).forEachIndexed { index, (recipe, types) ->
+            if (index > 0) out.space()
+            recipeLines(recipe, types, labelColor).forEach { out.add(it, centered = true) }
+            out.grid(
+                CaracatronRecipeGrid(
+                    recipe.width,
+                    recipe.grid,
+                    fuel = types.any { it in FUEL_TYPES },
+                    result = info.item,
+                    resultCount = recipe.count
+                )
+            )
+        }
+        if (out.lines.isEmpty()) out.add(tr("none_recipes"))
+    }
+
+    /**
+     * Adds a loot section: its title, then one group per place with the blocks or chests holding the item, and the
+     * tables without a known place on an "Others:" line.
+     */
+    private fun lootSection(loot: List<CaracatronMaterialLoot>, brushed: Boolean, labelColor: Int, out: CaracatronInfoLines, title: () -> Unit) {
+        if (loot.isEmpty()) return
+        title()
+        lootGroups(loot).forEach { group ->
+            out.space()
+            lootLines(group, brushed, labelColor).forEach(out::add)
+        }
+        val unplaced = loot.filter { it.place == null }.map { Component.literal(CaracatronSpawnText.readable(it.table.path)) }.distinctBy { it.string }
+        if (unplaced.isNotEmpty()) {
+            out.space()
+            out.add(bulleted(label(tr("label.other"), labelColor).append(" ").append(CaracatronSpawnText.join(unplaced))))
+        }
+        out.space()
+    }
+
+    private fun title(out: CaracatronInfoLines, key: String) = out.add(tr(key).withStyle(ChatFormatting.BOLD), CaracatronSpawnText.TITLE_COLOR)
 
     /**
      * Adds a block's title: its icon spanning two lines, its name in bold, and a subtitle saying whether it's the item
@@ -163,11 +252,30 @@ object CaracatronMaterialText {
     }
 
     /**
-     * Describes a spot: dimension and biomes, how it generates, its altitude and how often, each after its label.
+     * Adds a title after an item icon, centered on the icon when it fits in one line.
+     */
+    private fun iconTitle(icon: ResourceLocation, text: Component, font: Font, width: Int, lines: MutableList<CaracatronInfoLine>) {
+        val split = font.split(text, width - CaracatronInfoLine.ICON_INDENT)
+        val single = split.size < 2
+        split.forEachIndexed { index, line ->
+            lines += CaracatronInfoLine(
+                line,
+                CaracatronSpawnText.TITLE_COLOR,
+                if (index == 0) icon else null,
+                indented = true,
+                textOffset = if (single) CaracatronInfoLine.HALF_LINE else 0
+            )
+        }
+        if (single) lines += CaracatronInfoLine(FormattedCharSequence.EMPTY, CaracatronSpawnText.TEXT_COLOR, indented = true)
+    }
+
+    /**
+     * Describes a spot: its biomes ("Biomes:", or "Biomes (Nether):" outside the Overworld) as a list, how it generates,
+     * its altitude and how often, each after its label.
      */
     private fun spotLines(spot: CaracatronMaterialSpot, labelColor: Int): List<Component> {
-        val lines = mutableListOf<Component>()
-        lines += Component.literal("- ").append(placeLine(spot.dimension, spot.biomes, labelColor))
+        val heading = if (spot.dimension == OVERWORLD) tr("label.biomes") else tr("label.biomes_in", dimensionName(spot.dimension))
+        val lines = biomeLines(heading, spot.biomes, labelColor).toMutableList()
 
         val kind = when {
             spot.kind == CaracatronMaterialSpot.TERRAIN -> tr("kind.terrain")
@@ -204,11 +312,11 @@ object CaracatronMaterialText {
     }
 
     /**
-     * Describes a structure a block is part of: its name as a label, then its dimension and biomes.
+     * Describes a structure a block is part of: its name as a label, then where it generates.
      */
     private fun structureLines(structure: CaracatronMaterialStructure, labelColor: Int): List<Component> {
-        val lines = mutableListOf<Component>(Component.literal("- ").append(label(placeName(structure.structure), labelColor, colon = false)))
-        structure.dimension?.let { lines += indented(placeLine(it, structure.biomes, labelColor)) }
+        val lines = mutableListOf<Component>(bulleted(label(placeName(structure.structure), labelColor, colon = false)))
+        structure.dimension?.let { lines += generatedIn(it, structure.biomes, labelColor) }
         return lines
     }
 
@@ -224,7 +332,7 @@ object CaracatronMaterialText {
 
     /**
      * Describes the loot of a structure or feature: its name as a label followed by the blocks holding the item
-     * (brushing) or the chests holding it, then its dimension and biomes.
+     * (brushing) or the chests holding it, then where it generates.
      */
     private fun lootLines(group: LootGroup, brushed: Boolean, labelColor: Int): List<Component> {
         val holders = if (brushed) {
@@ -234,55 +342,105 @@ object CaracatronMaterialText {
         }.distinctBy { it.string }
 
         val lines = mutableListOf<Component>(
-            Component.literal("- ").append(label(placeName(group.place), labelColor)).append(" ").append(CaracatronSpawnText.join(holders))
+            bulleted(label(placeName(group.place), labelColor).append(" ").append(CaracatronSpawnText.join(holders)))
         )
-        group.dimension?.let { lines += indented(placeLine(it, group.biomes, labelColor)) }
+        group.dimension?.let { lines += generatedIn(it, group.biomes, labelColor) }
         return lines
     }
 
     /**
-     * Describes the recipe and berry source of the item: where it grows naturally, its mutations and a recipe making it,
-     * with their headings as labels.
+     * Describes the berry source of the item: where it grows naturally and its mutations, each as a list under its
+     * heading.
      */
     private fun sourceLines(info: CaracatronMaterialInfoPayload, labelColor: Int): List<Component> {
         val source = info.source
         val lines = mutableListOf<Component>()
         when {
             source.growsEverywhere -> lines += Component.translatable("text.caraca_customs.caracatron.source.grows_everywhere")
-            source.biomes.isNotEmpty() -> lines += label(Component.translatable("text.caraca_customs.caracatron.source.grows_in"), labelColor, colon = false)
-                .append(" ")
-                .append(CaracatronSpawnText.join(source.biomes.map { CaracatronSpawnText.biomeName(it.toString()) }))
-        }
-        if (source.mutations.isNotEmpty()) {
-            lines += label(Component.translatable("text.caraca_customs.caracatron.source.mutations"), labelColor, colon = false)
-            source.mutations.forEach { (first, second) ->
-                lines += indented(Component.translatable("text.caraca_customs.caracatron.source.mutation", itemName(first), itemName(second)))
+            source.biomes.isNotEmpty() -> {
+                lines += bulleted(label(Component.translatable("text.caraca_customs.caracatron.source.grows_in"), labelColor, colon = false))
+                lines += cutBiomes(source.biomes.map { it.toString() }, SUB_BULLET)
             }
         }
-        if (source.recipe.isNotEmpty()) {
-            val station = CaracatronItemSourceText.stationName(source.recipeType)
-            lines += label(Component.translatable("text.caraca_customs.caracatron.source.recipe", station), labelColor, colon = false)
-            source.recipe.forEach {
-                lines += indented(Component.translatable("text.caraca_customs.caracatron.snack.ingredient", it.count, itemName(it.item)))
+        if (source.mutations.isNotEmpty()) {
+            lines += bulleted(label(Component.translatable("text.caraca_customs.caracatron.source.mutations"), labelColor, colon = false))
+            source.mutations.forEach { (first, second) ->
+                lines += Component.literal(SUB_BULLET).append(Component.translatable("text.caraca_customs.caracatron.source.mutation", itemName(first), itemName(second)))
             }
         }
         return lines
     }
 
     /**
-     * Writes a dimension as a label followed by its biomes, e.g. "**Overworld:** Forest, Plains", or "**Overworld:**
-     * every biome".
+     * Merges the cooking recipes (furnace, blast furnace, smoker, campfire) with the same ingredients into one, keeping
+     * the order of the first one.
+     *
+     * @return Each recipe with the types it stands for.
      */
-    private fun placeLine(dimension: ResourceLocation, biomes: List<String>, labelColor: Int): Component {
-        val value = if (biomes.isEmpty()) tr("spot.every_biome") else CaracatronSpawnText.join(biomes.map(CaracatronSpawnText::biomeName))
-        return label(dimensionName(dimension), labelColor).append(" ").append(value)
+    private fun merged(recipes: List<CaracatronRecipe>): List<Pair<CaracatronRecipe, List<String>>> {
+        val groups = LinkedHashMap<Any, Pair<CaracatronRecipe, MutableList<String>>>()
+        recipes.forEachIndexed { index, recipe ->
+            val key: Any = if (recipe.type in COOKING_TYPES) Triple(recipe.ingredients, recipe.width, recipe.grid) else index
+            groups.getOrPut(key) { recipe to mutableListOf() }.second += recipe.type
+        }
+        return groups.values.map { (recipe, types) -> recipe to types.distinct() }
     }
 
     /**
-     * Writes an indented line made of a label and its value, e.g. "**Altitude:** Y -64 to 72".
+     * Describes a recipe: its stations as a label ("Furnace/Blast Furnace" when merged), then each ingredient with how
+     * many it takes. Its grid comes after.
+     */
+    private fun recipeLines(recipe: CaracatronRecipe, types: List<String>, labelColor: Int): List<Component> {
+        val station = Component.empty()
+        types.forEachIndexed { index, type ->
+            if (index > 0) station.append("/")
+            station.append(CaracatronItemSourceText.stationName(type))
+        }
+        val title = label(Component.translatable("text.caraca_customs.caracatron.source.recipe", station), labelColor, colon = false)
+        return listOf(title) + recipe.ingredients.map {
+            Component.translatable("text.caraca_customs.caracatron.snack.ingredient", it.count, itemName(it.item))
+        }
+    }
+
+    /**
+     * Writes where a structure or loot generates: "Generated in:" (or "Generated in (Nether):" outside the Overworld)
+     * and its biomes as a list, or "every biome" on the same line.
+     */
+    private fun generatedIn(dimension: ResourceLocation, biomes: List<String>, labelColor: Int): List<Component> {
+        val heading = if (dimension == OVERWORLD) tr("label.generated_in") else tr("label.generated_in_dimension", dimensionName(dimension))
+        return biomeLines(heading, biomes, labelColor)
+    }
+
+    /**
+     * Writes a biome heading followed by its biomes one per line after a hollow bullet, or "every biome" on the heading's
+     * line when the list is empty.
+     */
+    private fun biomeLines(heading: Component, biomes: List<String>, labelColor: Int): List<Component> {
+        val label = label(heading, labelColor)
+        if (biomes.isEmpty()) return listOf(bulleted(label.append(" ").append(tr("spot.every_biome"))))
+        return listOf(bulleted(label)) + cutBiomes(biomes, CaracatronSpawnText.LIST_BULLET)
+    }
+
+    /**
+     * Lists biomes one per line after a bullet, up to [MAX_BIOMES]. A longer list ends with "And X more...", whose
+     * tooltip lists the rest ([MORE_BIOMES]).
+     *
+     * @param biomes Biome and biome group ids (`#` prefixed).
+     * @param bullet Bullet put before each biome, with its indent.
+     */
+    private fun cutBiomes(biomes: List<String>, bullet: String): List<Component> {
+        if (biomes.size <= MAX_BIOMES + 1) return biomes.map { Component.literal(bullet).append(CaracatronSpawnText.biomeName(it)) }
+        val shown = biomes.take(MAX_BIOMES).map { Component.literal(bullet).append(CaracatronSpawnText.biomeName(it)) }
+        val rest = biomes.drop(MAX_BIOMES)
+        val more = tr("more_biomes", rest.size).withStyle { it.withUnderlined(true).withInsertion(MORE_BIOMES + rest.joinToString(BIOME_SEPARATOR)) }
+        return shown + Component.literal(bullet).append(more)
+    }
+
+    /**
+     * Writes a bulleted line made of a label and its value, like "**Altitude:** Y -64 to 72".
      */
     private fun labeled(labelKey: String, value: Component, labelColor: Int): Component {
-        return indented(label(tr(labelKey), labelColor).append(" ").append(value))
+        return bulleted(label(tr(labelKey), labelColor).append(" ").append(value))
     }
 
     /**
@@ -298,14 +456,14 @@ object CaracatronMaterialText {
     }
 
     /**
-     * Names a structure or feature, e.g. "Village Plains", from its identifier.
+     * Names a structure or feature, like "Village Plains", from its identifier.
      */
     private fun placeName(id: ResourceLocation): Component {
         return Component.translatableWithFallback("$KEY.structure.${id.namespace}.${id.path.replace('/', '.')}", CaracatronSpawnText.readable(id.path))
     }
 
     /**
-     * Names a dimension, e.g. "Overworld", or a readable version of its identifier when there's no translation.
+     * Names a dimension, like "Overworld", or a readable version of its identifier when there's no translation.
      */
     private fun dimensionName(id: ResourceLocation): Component {
         return Component.translatableWithFallback("$KEY.dimension.${id.namespace}.${id.path.replace('/', '.')}", CaracatronSpawnText.readable(id.path))
@@ -313,7 +471,7 @@ object CaracatronMaterialText {
 
     private fun itemName(id: ResourceLocation): Component = BuiltInRegistries.ITEM.get(id).description
 
-    private fun indented(line: Component): Component = Component.literal(INDENT).append(line)
+    private fun bulleted(line: Component): Component = Component.literal(BULLET).append(line)
 
     private fun tr(key: String, vararg args: Any): MutableComponent = Component.translatable("$KEY.$key", *args)
 }

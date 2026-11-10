@@ -12,22 +12,25 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 
 /**
- * Turns a species' drops into the lines of the Caracatron's drops page: every item it drops when defeated, shown by its
- * icon (named in a tooltip) with how many and the chance of its drop entry, the species' own drops first and then the
- * forms that drop something else.
+ * Lines of the drops page: every item the species drops, by icon, with its amount and chance, then the forms that drop
+ * something else. Entries keep the drop table's order, since Cobblemon tries them in that order.
  *
- * With Pasture Loot on the server, the panel also says how often a pastured Pokémon drops something and marks the items
- * Pasture Loot's blocklist keeps out of pastures. The whole line of the items matching the search is bold and green,
- * and single line entries sit in the middle of their icon. The item under the mouse is underlined, and clicking it
- * searches its id ([CaracatronInfoLine.link]). Entries keep the drop table's order, since Cobblemon tries
- * them in that order.
+ * Searched items are bold and green, and the hovered one is underlined and can be clicked to search it
+ * ([CaracatronInfoLine.link]). With Pasture Loot, each chance is followed by whether pastures drop the item.
  *
  * @author hadouz01
  * @since 1.26.0
  */
 object CaracatronDropText {
 
+    /**
+     * Prefix of the style insertion of the pasture tags, followed by their lang key (`pasture_allowed` or
+     * `pasture_blocked`), whose `.tooltip` explains them.
+     */
+    const val PASTURE_INSERTION = "pasture:"
+
     private const val KEY = "text.caraca_customs.caracatron.drops"
+    private const val PASTURE_ALLOWED_COLOR = 0x035F15
 
     /**
      * Builds and wraps the drops page lines. Each item takes at least two lines, so its icon never overlaps the next one.
@@ -50,57 +53,67 @@ object CaracatronDropText {
         font: Font,
         width: Int
     ): List<CaracatronInfoLine> {
-        val lines = mutableListOf<CaracatronInfoLine>()
+        val out = CaracatronInfoLines(font, width)
         val itemWidth = width - CaracatronInfoLine.ICON_INDENT
 
-        fun add(component: Component, color: Int = CaracatronSpawnText.TEXT_COLOR) {
-            font.split(component, width).forEach { lines += CaracatronInfoLine(it, color) }
-        }
-
-        fun space() {
-            lines += CaracatronInfoLine(FormattedCharSequence.EMPTY, CaracatronSpawnText.TEXT_COLOR)
-        }
-
         if (groups.all { it.entries.isEmpty() }) {
-            add(tr("none"))
-            return lines
+            out.add(tr("none"))
+            return out.lines
         }
 
         if (pastureLoot != null && pastureLoot.chancePerMinute >= 0) {
-            add(tr("pasture_chance", percent(pastureLoot.chancePerMinute * 100)))
-            space()
+            out.add(tr("pasture_chance", percent(pastureLoot.chancePerMinute * 100)))
+            out.space()
         }
 
         groups.forEach { group ->
             val title = group.formName?.let { tr("form", it) } ?: tr("title")
-            add(title.withStyle(ChatFormatting.BOLD), CaracatronSpawnText.TITLE_COLOR)
-            if (group.entries.isEmpty()) add(tr("form_none"))
+            out.add(title.withStyle(ChatFormatting.BOLD), CaracatronSpawnText.TITLE_COLOR)
+            if (group.entries.isEmpty()) out.add(tr("form_none"))
 
             group.entries.forEach { entry ->
                 val text = tr("entry", quantity(entry), percent(entry.percentage.toDouble()))
+                pastureLoot?.let { text.append(" ").append(pastureTag(entry.item in it.blacklist)) }
                 if (entry.item in matched) text.withStyle { it.withBold(true).withColor(matchColor) }
                 if (entry.item == hovered) text.withStyle(ChatFormatting.UNDERLINE)
 
                 val entryLines = font.split(text, itemWidth)
-                val pasture = pastureLoot?.let { tr(if (entry.item in it.blacklist) "pasture_blocked" else "pasture_allowed") }
-                val pastureColor = if (pastureLoot != null && entry.item in pastureLoot.blacklist) CaracatronSpawnText.LOCKED_COLOR else CaracatronSpawnText.TEXT_COLOR
-                val pastureLines = pasture?.let { font.split(it, itemWidth) }.orEmpty()
-                val singleLine = entryLines.size + pastureLines.size < 2
+                val singleLine = entryLines.size < 2
                 val textOffset = if (singleLine) CaracatronInfoLine.HALF_LINE else 0
 
                 entryLines.forEachIndexed { index, line ->
-                    lines += CaracatronInfoLine(line, CaracatronSpawnText.TEXT_COLOR, if (index == 0) entry.item else null, indented = true, textOffset = textOffset, link = entry.item)
+                    out.lines += CaracatronInfoLine(
+                        text = line,
+                        color = CaracatronSpawnText.TEXT_COLOR,
+                        item = if (index == 0) entry.item else null,
+                        indented = true,
+                        textOffset = textOffset,
+                        link = entry.item
+                    )
                 }
-                pastureLines.forEach { lines += CaracatronInfoLine(it, pastureColor, indented = true, link = entry.item) }
-                if (singleLine) lines += CaracatronInfoLine(FormattedCharSequence.EMPTY, CaracatronSpawnText.TEXT_COLOR, indented = true, link = entry.item)
+                if (singleLine) {
+                    out.lines += CaracatronInfoLine(FormattedCharSequence.EMPTY, CaracatronSpawnText.TEXT_COLOR, indented = true, link = entry.item)
+                }
             }
-            space()
+            out.space()
         }
-        return lines
+        return out.lines
     }
 
     /**
-     * Writes how many of an item a drop gives: its range when it has one, e.g. `1-3`.
+     * Writes whether pastures drop an item, like "(✔ Pasture)" in green or "(✘ Pasture)" in red. It carries
+     * [PASTURE_INSERTION] so the screen can explain it on hover, and keeps its color when the entry is highlighted.
+     *
+     * @param blocked Whether Pasture Loot's blocklist has the item.
+     */
+    private fun pastureTag(blocked: Boolean): Component {
+        val key = if (blocked) "pasture_blocked" else "pasture_allowed"
+        val color = if (blocked) CaracatronSpawnText.LOCKED_COLOR else PASTURE_ALLOWED_COLOR
+        return tr(key).withStyle { it.withColor(color).withInsertion("$PASTURE_INSERTION$key") }
+    }
+
+    /**
+     * Writes how many of an item a drop gives: its range when it has one, like `1-3`.
      */
     private fun quantity(entry: ItemDropEntry): String {
         val range = entry.quantityRange ?: return entry.quantity.toString()
@@ -108,7 +121,7 @@ object CaracatronDropText {
     }
 
     /**
-     * Writes a percentage with up to two decimals, e.g. `2.5%` or `100%`.
+     * Writes a percentage with up to two decimals, like `2.5%` or `100%`.
      */
     private fun percent(value: Double): String {
         return BigDecimal(value).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "%"

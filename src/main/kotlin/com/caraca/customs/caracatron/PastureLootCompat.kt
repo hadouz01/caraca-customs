@@ -9,12 +9,8 @@ import org.slf4j.LoggerFactory
 import java.nio.file.Files
 
 /**
- * Reads the settings of the Pasture Loot mod (`pasture-loot`), which makes Pokémon in a pasture drop items from their
- * drop table now and then, except the items in its blocklist.
- *
- * Pasture Loot has no API, so its own config file, `config/PastureLoot.json`, is read on every request: `item_blacklist`
- * (item ids the pastures never drop) and `drop_chance_per_minute` (chance each pastured Pokémon drops something each
- * minute). Reading it fresh keeps the Caracatron in line with edits made while the server runs, and the file is tiny.
+ * Reads Pasture Loot's settings from `config/PastureLoot.json`: its item blocklist and drop chance per minute. The mod
+ * has no API and the file is tiny, so it's read again on every request to catch edits made while the server runs.
  *
  * @author hadouz01
  * @since 1.26.0

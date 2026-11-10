@@ -1,0 +1,17 @@
+{
+    "fabric:load_conditions": [
+        { "condition": "caraca_customs:feature_enabled", "feature": "custom_balls" }
+    ],
+    "type": "minecraft:crafting_shapeless",
+    "category": "equipment",
+    "group": "basic_ancient_balls",
+    "ingredients": [
+        { "item": "caraca_customs:ancient_poke_ball" },
+        { "item": "cobblemon:blue_apricorn" },
+        { "item": "cobblemon:blue_apricorn" }
+    ],
+    "result": {
+        "count": 1,
+        "id": "caraca_customs:ancient_lavender_ball"
+    }
+}

@@ -14,13 +14,10 @@ import com.cobblemon.mod.common.pokemon.status.PersistentStatus
 import com.cobblemon.mod.common.util.cobblemonResource
 
 /**
- * Client-side integration with the optional `catchrate-display` mod.
+ * catchrate-display integration. Every custom ball is registered through its [CatchRateBallRegistry], so they show up in
+ * the comparison panel with their own names and the HUD uses the balls' real catch logic.
  *
- * Registers every custom Poké Ball through catchrate-display's public [CatchRateBallRegistry] API,
- * which adds them to the ball comparison panel and resolves their localized names. Multipliers come from the
- * balls' own catch rate modifiers, so the HUD always matches the real capture logic and the live configuration.
- *
- * Must only be loaded when `catchrate-display` is installed.
+ * Only load this when catchrate-display is installed.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -41,7 +38,7 @@ object CatchRateDisplayCompat {
     /**
      * Evaluates a bare ball id (path without namespace) as forwarded by catchrate-display's held-ball HUD.
      *
-     * @param ballId Ball path, e.g. `poke_ball`.
+     * @param ballId Ball path, like `poke_ball`.
      * @param primaryType Primary type name of the target.
      * @param secondaryType Secondary type name of the target, if any.
      * @param statusPath Persistent status path of the target, if any.

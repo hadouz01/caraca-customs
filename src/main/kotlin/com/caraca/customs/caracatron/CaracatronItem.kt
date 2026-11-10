@@ -13,12 +13,8 @@ import net.minecraft.world.item.UseAnim
 import net.minecraft.world.level.Level
 
 /**
- * The Caracatron 3000, a handheld device showing the player's tier, the species each tier unlocks and where they spawn.
- *
- * Used like Cobblemon's Pokédex: a quick click opens the Caracatron screen (asked to the server, which sends the player's
- * progress back), while holding the use button opens Cobblemon's scanner, which scans Pokémon faster than a Pokédex
- * ([com.caraca.customs.config.ConfigData.caracatronScanSpeed], 2x by default). The scanner runs on the client through
- * [scanHooks], set by the client entrypoint, so this class stays free of client code.
+ * The Caracatron 3000 item. A quick click opens the Caracatron screen, holding the use button opens Cobblemon's scanner,
+ * faster than a Pokédex. The scanner runs on the client through [scanHooks], so this class has no client code.
  *
  * @author hadouz01
  * @since 1.12.0

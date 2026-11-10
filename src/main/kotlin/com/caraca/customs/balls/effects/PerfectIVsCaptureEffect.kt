@@ -8,7 +8,7 @@ import net.minecraft.world.entity.LivingEntity
 /**
  * Capture effect that maximizes all Individual Values (IVs) of a captured Pokémon to 31.
  *
- * Iterates through Cobblemon's permanent stats ([Stats.PERMANENT]) and sets each corresponding IV value to 31.
+ * Sets every permanent stat's IV ([Stats.PERMANENT]) to 31.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -23,7 +23,7 @@ class PerfectIVsCaptureEffect : CaptureEffect {
 
     companion object {
         /**
-         * Maximum achievable Individual Value (IV) for any stat slot.
+         * Highest IV a stat can have.
          */
         private const val PERFECT_IV_VALUE: Int = 31
     }

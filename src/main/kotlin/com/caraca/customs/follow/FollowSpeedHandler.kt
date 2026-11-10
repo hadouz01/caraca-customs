@@ -28,22 +28,13 @@ import kotlin.math.min
 import kotlin.math.sqrt
 
 /**
- * Keeps sent out party Pokémon close to their owners with a follow distance based on their size and a boosted speed,
- * so they keep up with a walking or sprinting owner instead of falling behind and teleporting.
+ * Keeps sent out party Pokémon close to their owner, with a follow distance based on their size and a speed boost so
+ * slow species keep up with a walking or sprinting player.
  *
- * The boost is a transient multiplier on the entity's movement speed attribute, so it applies to every path the
- * Pokémon walks. Cobblemon's move control turns the attribute, the
- * walk target's speed modifier, the species' walk, swim or fly speed and the Pokémon's scale into the speed it moves
- * at, and slow species like Chikorita end up far slower than a walking player. The multiplier brings that speed up to
- * [CRUISE_SPEED] while the Pokémon is in range, and to [CATCH_UP_SPEED] (plus [CATCH_UP_PER_BLOCK] for every block
- * further behind, up to [MAX_SPEED]) while it's catching up. Fast species are never slowed down.
- *
- * Height is the species' Pokédex height times the Pokémon's scale, and distances don't count the Pokémon's own width,
- * like Cobblemon's own follow behavior. Only party Pokémon of online players are touched, so wild Pokémon, NPC Pokémon
- * and pastured ones keep Cobblemon's behavior. Battling, busy, ridden and immobile Pokémon lose the boost, and
- * Cobblemon still teleports them if they somehow get stuck far away.
- *
- * Does nothing while [Feature.FOLLOW_SPEED] is disabled, and removes every boost it applied when it gets disabled.
+ * The boost is a transient multiplier on the movement speed attribute: up to [CRUISE_SPEED] in range, and
+ * [CATCH_UP_SPEED] plus [CATCH_UP_PER_BLOCK] per block behind (up to [MAX_SPEED]) while catching up. Fast species are
+ * never slowed down. Only online players' party Pokémon are touched, and battling, busy, ridden or immobile ones lose the
+ * boost. Turning [Feature.FOLLOW_SPEED] off removes every boost.
  *
  * @author hadouz01
  * @since 1.8.0

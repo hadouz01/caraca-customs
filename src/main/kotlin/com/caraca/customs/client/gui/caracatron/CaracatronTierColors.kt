@@ -3,13 +3,8 @@ package com.caraca.customs.client.gui.caracatron
 import java.awt.Color
 
 /**
- * Tier colors of the Caracatron 3000, used on the slot outlines and on the filter over uncaught Pokémon.
- *
- * Up to six tiers, each tier takes its own color from [BASE], from yellow green to red. Past six tiers the six colors are
- * stretched over the tier count, so the first tier is always yellow green and the last always red, and the tiers between
- * them blend the two nearest colors. The blend goes through hue, saturation and brightness rather than red, green and
- * blue, since the base colors already walk the hue wheel in one direction and a plain RGB blend turns muddy between
- * blue and magenta.
+ * Tier colors of the Caracatron, from yellow green in tier 1 to red in the last one ([BASE]). Past six tiers the colors
+ * get stretched and blended in HSB, since an RGB blend gets muddy between blue and magenta.
  *
  * @author hadouz01
  * @since 1.15.0

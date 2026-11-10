@@ -1,5 +1,6 @@
 package com.caraca.customs.config
 
+import com.caraca.customs.balls.BallMaterials
 import com.caraca.customs.balls.CustomBallRegistry
 import com.caraca.customs.balls.modules.BallTier
 import com.caraca.customs.constants.ExpDivisionMethod
@@ -17,12 +18,12 @@ import java.io.FileWriter
 import kotlin.math.roundToInt
 
 /**
- * Data container representing individual berry configuration properties.
+ * Settings of a berry.
  *
- * @property minYield Minimum base yield count upon harvest.
- * @property maxYield Maximum base yield count upon harvest.
- * @property minGrowthTime Minimum growth time in minutes from stage 0 to stage 3.
- * @property maxGrowthTime Maximum growth time in minutes from stage 0 to stage 3.
+ * @property minYield Lowest base yield on harvest.
+ * @property maxYield Highest base yield on harvest.
+ * @property minGrowthTime Shortest growth time, in minutes, from stage 0 to 3.
+ * @property maxGrowthTime Longest growth time, in minutes, from stage 0 to 3.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -35,10 +36,10 @@ data class BerryConfigEntry(
 )
 
 /**
- * Data container representing custom Poké Ball capture rate properties.
+ * Catch rates of a custom Poké Ball.
  *
- * @property defaultCaptureRate Base catch rate multiplier applied under standard conditions.
- * @property boostedCaptureRate Multiplier applied when elemental or status conditions are met.
+ * @property defaultCaptureRate Catch rate multiplier in normal conditions.
+ * @property boostedCaptureRate Catch rate multiplier when the ball's type or status condition is met.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -49,21 +50,18 @@ data class PokeBallConfigEntry(
 )
 
 /**
- * Data container representing the spawn rules of a species group in the tier spawn cap.
+ * Spawn rules of a spawn group in the tier spawn cap. Rates multiply the species' original spawn rate (`1.0` keeps it).
  *
- * Rates are multipliers of the species' original spawn rate (`1.0` = unchanged).
- *
- * @property startTier Tier in which the group starts spawning at [maxSpawnRateMultiplier].
+ * @property startTier Tier where the group starts spawning at [maxSpawnRateMultiplier].
  * @property maxSpawnRateMultiplier Spawn rate multiplier reached at [startTier], from 0.01 to 100.
  * @property reducedRateInterval How many tiers before [startTier] the group already spawns, from 0 to 3. The tier right
- * before [startTier] gets [earlyTierSpawnRate] of [maxSpawnRateMultiplier], and each earlier tier gets half of the next one.
- * @property earlyTierSpawnRate Fraction of [maxSpawnRateMultiplier] given to the tier right before [startTier], from 0.01
- * to 1 (25% by default). Also used when the group is unlocked early to fill a tier without enough species.
- * @property reduceSpawnRateTier Tier in which the group reaches [maxReducedSpawnRate], always above [startTier].
- * `0` disables the reduction.
- * @property maxReducedSpawnRate Spawn rate multiplier reached at [reduceSpawnRateTier], from 0.01 to 99.99 and always at
- * least 0.01 below [maxSpawnRateMultiplier]. `0` disables the reduction. Between [startTier] and
- * [reduceSpawnRateTier] the rate goes down in equal steps.
+ * before gets [earlyTierSpawnRate] of [maxSpawnRateMultiplier], and each earlier one gets half of the next.
+ * @property earlyTierSpawnRate Fraction of [maxSpawnRateMultiplier] for the tier right before [startTier], from 0.01 to 1
+ * (25% by default). Also used when the group gets unlocked early to fill a tier.
+ * @property reduceSpawnRateTier Tier where the group reaches [maxReducedSpawnRate], always above [startTier]. `0` turns
+ * the reduction off.
+ * @property maxReducedSpawnRate Spawn rate multiplier reached at [reduceSpawnRateTier], from 0.01 to 99.99 and at least
+ * 0.01 below [maxSpawnRateMultiplier]. `0` turns the reduction off. The rate goes down in equal steps until then.
  *
  * @author hadouz01
  * @since 1.5.0
@@ -106,44 +104,43 @@ data class ExpShareConfigEntry(
 )
 
 /**
- * Main configuration model for mod customization including berries and custom Poké Balls.
+ * The whole mod config. Maps keep their insertion order, so the file and Mod Menu keep the same layout.
  *
- * Employs insertion-ordered map instances to preserve natural layout structure across serialization and GUI rendering.
- *
- * @property debugGrowthTick Toggles debug notifications when growth ticks are calculated for berries.
- * @property globalHoeFortuneChance Base probability per Fortune level applied when harvesting with a tool.
- * @property defaultBerryConfig Fallback configuration applied to berries when attributes are non-positive or missing.
- * @property berryOverrides Map of specific berry identifiers to custom configuration entries.
- * @property defaultRegularPokeBallConfig Default capture rate config for regular custom Poké Balls.
- * @property defaultUltraPokeBallConfig Default capture rate config for ultra custom Poké Balls.
- * @property defaultCaracaBallConfig Default capture rate config for Caraca Poké Balls.
+ * @property debugGrowthTick Shows a debug message every time a berry growth tick is calculated.
+ * @property globalHoeFortuneChance Chance per Fortune level of an extra berry when harvesting with a hoe.
+ * @property defaultBerryConfig Berry settings used when a berry has none, or a value isn't positive.
+ * @property berryOverrides Settings of specific berries, by id.
+ * @property defaultRegularPokeBallConfig Default catch rates of regular custom Poké Balls.
+ * @property defaultUltraPokeBallConfig Default catch rates of ultra custom Poké Balls.
+ * @property defaultCaracaBallConfig Default catch rates of Caraca Poké Balls.
  * @property defaultExpShareConfig How Exp. Share All splits the experience between the party.
- * @property pokeBallOverrides Map of specific custom Poké Ball path identifiers to custom capture rate configurations.
- * @property customBallsEnabled Toggles the custom Poké Balls: their recipes, loot, the native recipes that craft them, the
- * creative tab replacement and the `pokeball=` aliases. Recipe changes apply on the next datapack reload.
- * @property berryMechanicsEnabled Toggles the berry growth times, yields, Hoe Fortune bonus and mulch uses.
- * @property dynamicFollowSpeedEnabled Toggles the size-based follow distance and catch-up speed of sent out party Pokémon.
- * @property expShareAllEnabled Toggles Exp. Share All, giving experience to the whole party when one member earns it.
- * @property levelCapEnabled Toggles the tier level caps on player-owned Pokémon.
- * @property tierCount Amount of progression tiers, from 1 to 20.
- * @property maxTierCaptureCount Caught species needed to reach the last tier, from 50 to 1025.
- * @property spawnCapEnabled Toggles the tier spawn cap on natural spawns.
- * @property tierSpeciesSurplus Extra spawnable species each tier must offer beyond what the next tier needs, as a fraction
- * of it, from 0 to 2, 0.4 by default. Ex: 0.4 = a tier leading to one that needs 100 species must have at least 140
- * spawnable species.
- * @property tierSpawnLevelsEnabled Toggles natural spawn levels following the level cap of the player's tier.
+ * @property pokeBallOverrides Catch rates of specific custom Poké Balls, by path.
+ * @property customBallsEnabled Turns the custom Poké Balls on or off: recipes, loot, the native recipes that craft them,
+ * the creative tab and the `pokeball=` aliases. Recipes follow on the next datapack reload.
+ * @property regularBallMaterial Item regular Poké Ball recipes ask for, one of [BallMaterials.REGULAR_OPTIONS].
+ * @property ultraBallMaterial Item Ultra Poké Ball recipes ask for, one of [BallMaterials.ULTRA_OPTIONS].
+ * @property ultraBallCornerFill Item filling the empty corners of the Ultra Poké Ball recipes, one of
+ * [BallMaterials.CORNER_OPTIONS], or [BallMaterials.NO_CORNER_FILL] to leave them empty.
+ * @property berryMechanicsEnabled Turns the berry growth times, yields, Hoe Fortune bonus and mulch uses on or off.
+ * @property dynamicFollowSpeedEnabled Turns the size-based follow distance and catch-up speed of party Pokémon on or off.
+ * @property expShareAllEnabled Turns Exp. Share All on or off.
+ * @property levelCapEnabled Turns the tier level caps on or off.
+ * @property tierCount How many tiers there are, from 1 to 20.
+ * @property maxTierCaptureCount Caught species needed for the last tier, from 50 to 1025.
+ * @property spawnCapEnabled Turns the tier spawn cap on or off.
+ * @property tierSpeciesSurplus Extra spawnable species each tier must have beyond what the next tier needs, as a
+ * fraction, from 0 to 2 (0.4 by default). With 0.4, a tier leading to one that needs 100 species must have 140.
+ * @property tierSpawnLevelsEnabled Turns spawn levels following the tier's level cap on or off.
  * @property averageSpawnLevelStart Where the most common spawn levels start, as a fraction of the way from the tier's
  * minimum spawn level to its level cap, from 0 to 1.
- * @property averageSpawnLevelEnd Where the most common spawn levels end, in the same scale, from 0 to 1.
- * @property averageSpawnLevelChance Minimum share of natural spawns rolling a level from the most common range, from 0 to 1.
- * @property spawnGroups Map of [SpawnGroup] identifiers to their spawn rules.
- * @property playerSharedTieringEnabled Toggles player-shared tiering, counting the species caught by every player together
- * to unlock tiers.
- * @property tierShareBlocklist Names of players left out of the shared tiers, who progress with their own captures only.
- * @property caracatronScreenColor Screen color of the Caracatron 3000, the name of a color folder in
- * `assets/caraca_customs/textures/gui/caracatron/colors/`. A visual preference of each player, so the server's value never
- * replaces the client's own.
- * @property caracatronScanSpeed How many times faster the Caracatron 3000 scans Pokémon than a Pokédex, from 1 to 5.
+ * @property averageSpawnLevelEnd Where the most common spawn levels end, on the same scale, from 0 to 1.
+ * @property averageSpawnLevelChance Minimum share of spawns rolling a level from the most common range, from 0 to 1.
+ * @property spawnGroups Spawn rules of every [SpawnGroup], by id.
+ * @property playerSharedTieringEnabled Turns player-shared tiering on or off.
+ * @property tierShareBlocklist Players left out of the shared tiers, who progress with their own captures only.
+ * @property caracatronScreenColor Caracatron screen color, a folder name in `textures/gui/caracatron/colors/`. It's each
+ * player's own choice, so the server's value never replaces the client's.
+ * @property caracatronScanSpeed How many times faster the Caracatron scans than a Pokédex, from 1 to 5.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -178,6 +175,9 @@ data class ConfigData(
     ),
     val pokeBallOverrides: MutableMap<String, PokeBallConfigEntry> = linkedMapOf(),
     var customBallsEnabled: Boolean = true,
+    var regularBallMaterial: String = BallMaterials.REGULAR_OPTIONS.first(),
+    var ultraBallMaterial: String = BallMaterials.ULTRA_OPTIONS.first(),
+    var ultraBallCornerFill: String = BallMaterials.NO_CORNER_FILL,
     var berryMechanicsEnabled: Boolean = true,
     var dynamicFollowSpeedEnabled: Boolean = true,
     var expShareAllEnabled: Boolean = true,
@@ -198,10 +198,7 @@ data class ConfigData(
 )
 
 /**
- * High-performance JSON configuration manager handling loading, saving, and querying mod settings.
- *
- * Enforces dynamic bounds and sanitization rules for capture rates and berry parameters.
- * Creates and reads `.minecraft/config/caraca_customs/server_config.json`.
+ * Loads, saves and sanitizes the mod config, `config/caraca_customs/server_config.json`.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -279,8 +276,8 @@ object DynamicConfig {
         .toFile()
 
     /**
-     * Every berry shipped by Cobblemon 1.8.4. Berries are datapack-driven and not yet loaded during
-     * mod initialization, so their identifiers are listed explicitly.
+     * Every berry of Cobblemon 1.8.4. Berries come from datapacks and aren't loaded yet when the mod starts, so their ids
+     * are listed here.
      */
     private val ALL_BERRY_KEYS = listOf(
         "aguav", "apicot", "aspear", "babiri", "belue", "bluk", "charti", "cheri", "chesto", "chilan",
@@ -293,15 +290,14 @@ object DynamicConfig {
     ).map { "cobblemon:${it}_berry" }
 
     /**
-     * Active configuration instance held in memory.
-     * Accessible from Java via [DynamicConfig.getData].
+     * Config in use. Java code reads it through [DynamicConfig.getData].
      */
     @JvmStatic
     var data: ConfigData = ConfigData()
         private set
 
     /**
-     * Loads the configuration file from disk or creates a default one if absent.
+     * Loads the config file, or creates it with the defaults.
      */
     fun load() {
         if (!CONFIG_FILE.parentFile.exists()) {
@@ -329,7 +325,7 @@ object DynamicConfig {
     }
 
     /**
-     * Serializes and saves the active in-memory configuration state back to disk.
+     * Sanitizes the config and saves it to disk.
      */
     fun save() {
         sanitizeAndValidateEntries()
@@ -359,7 +355,7 @@ object DynamicConfig {
     }
 
     /**
-     * Ensures all registered custom balls and berries exist in their respective override maps dynamically.
+     * Adds every ball, berry and spawn group missing from the config.
      */
     private fun populateMissingDefaults() {
         populateBallDefaults()
@@ -368,7 +364,7 @@ object DynamicConfig {
     }
 
     /**
-     * Dynamically populates missing Poké Ball entries from [CustomBallRegistry].
+     * Adds a blank override for every custom ball missing from the config.
      */
     private fun populateBallDefaults() {
         CustomBallRegistry.getRegisteredBalls().forEach { modularBall ->
@@ -380,7 +376,7 @@ object DynamicConfig {
     }
 
     /**
-     * Dynamically populates missing Berry entries from Cobblemon's [Berries] registry.
+     * Adds a blank override for every berry missing from the config.
      */
     private fun populateBerryDefaults() {
         ALL_BERRY_KEYS.forEach { key ->
@@ -392,7 +388,7 @@ object DynamicConfig {
     }
 
     /**
-     * Populates missing spawn group entries with the defaults of each [SpawnGroup], in declaration order.
+     * Adds every spawn group missing from the config, with its defaults.
      */
     private fun populateSpawnGroupDefaults() {
         SpawnGroup.entries.forEach { group ->
@@ -407,7 +403,7 @@ object DynamicConfig {
      * - the reduction tier above the start tier and up to the tier count, or `0` (disabled) when that's impossible;
      * - the reduced rate between 0.01 and 99.99 and at least 0.01 below the max multiplier, or `0` (disabled).
      *
-     * @param entry Target spawn group entry.
+     * @param entry Spawn group entry.
      * @param tierCount Amount of tiers configured.
      */
     private fun sanitizeSpawnGroup(entry: SpawnGroupConfigEntry, tierCount: Int) {
@@ -437,10 +433,9 @@ object DynamicConfig {
     }
 
     /**
-     * Resolves the spawn rules of a group, falling back to its defaults when missing from the config.
+     * Gets the spawn rules of a group, or its defaults when it's missing from the config.
      *
-     * @param group Target spawn group.
-     * @return The group's config entry.
+     * @param group Spawn group.
      */
     @JvmStatic
     fun getSpawnGroupConfigFor(group: SpawnGroup): SpawnGroupConfigEntry {
@@ -448,7 +443,7 @@ object DynamicConfig {
     }
 
     /**
-     * Normalizes global and individual overrides with bounds, floors, ceilings, and boosted values.
+     * Keeps every value of the config within its bounds.
      */
     private fun sanitizeAndValidateEntries() {
         data.globalHoeFortuneChance = data.globalHoeFortuneChance.coerceIn(MIN_FORTUNE_CHANCE, MAX_FORTUNE_CHANCE)
@@ -476,6 +471,9 @@ object DynamicConfig {
         sanitizeExpShareConfig(data.defaultExpShareConfig)
         data.caracatronScreenColor = sanitizeCaracatronColor(data.caracatronScreenColor as String?)
         data.caracatronScanSpeed = data.caracatronScanSpeed.coerceIn(MIN_CARACATRON_SCAN_SPEED, MAX_CARACATRON_SCAN_SPEED)
+        data.regularBallMaterial = BallMaterials.sanitize(data.regularBallMaterial as String?, BallMaterials.REGULAR_OPTIONS)
+        data.ultraBallMaterial = BallMaterials.sanitize(data.ultraBallMaterial as String?, BallMaterials.ULTRA_OPTIONS)
+        data.ultraBallCornerFill = BallMaterials.sanitize(data.ultraBallCornerFill as String?, BallMaterials.CORNER_OPTIONS)
         data.tierShareBlocklist = (data.tierShareBlocklist as MutableList<String>?).orEmpty()
             .map { it.trim() }
             .filter { it.isNotEmpty() }
@@ -487,7 +485,7 @@ object DynamicConfig {
      * Restores enum values Gson left as `null` after a typo in the file, keeps the multiplier between 0 and 1 and the
      * Exp. Share bonus between 0 and [MAX_EXP_SHARE_ITEM_BONUS], both with two decimals.
      *
-     * @param entry Target Exp. Share All configuration entry.
+     * @param entry Exp. Share All configuration entry.
      */
     /**
      * Turns a stored screen color into a valid folder name, lowercase (older files kept `BLUE`), falling back to
@@ -508,10 +506,9 @@ object DynamicConfig {
     }
 
     /**
-     * Sanitizes global Poké Ball default values applying absolute floor 0.01, ceiling 10000.0,
-     * and ensuring boosted rate never falls below default rate.
+     * Keeps a tier's default catch rates between 0.01 and 10000, with the boosted rate never below the default one.
      *
-     * @param entry Target global Poké Ball configuration entry.
+     * @param entry Default catch rates of a tier.
      */
     private fun sanitizeGlobalPokeBallConfig(entry: PokeBallConfigEntry) {
         entry.defaultCaptureRate = entry.defaultCaptureRate.coerceIn(GLOBAL_BALL_RATE_FLOOR, ABSOLUTE_BALL_RATE_CEILING)
@@ -523,10 +520,9 @@ object DynamicConfig {
     }
 
     /**
-     * Sanitizes individual Poké Ball override entries applying floor 0.0, ceiling 10000.0,
-     * and ensuring boosted rate never falls below default rate.
+     * Keeps a ball override between 0 and 10000, with the boosted rate never below the default one.
      *
-     * @param entry Target unitary Poké Ball configuration entry.
+     * @param entry Ball override.
      */
     private fun sanitizeUnitaryPokeBallOverride(entry: PokeBallConfigEntry) {
         entry.defaultCaptureRate = entry.defaultCaptureRate.coerceIn(UNITARY_BALL_RATE_FLOOR, ABSOLUTE_BALL_RATE_CEILING)
@@ -538,9 +534,9 @@ object DynamicConfig {
     }
 
     /**
-     * Enforces absolute non-zero floors and upper yield ceilings exclusively on global default berry configuration.
+     * Keeps the default berry settings above zero and the yield under [MAX_YIELD_CAP].
      *
-     * @param defaultEntry Global default configuration.
+     * @param defaultEntry Default berry settings.
      */
     private fun sanitizeGlobalDefaultBerryConfig(defaultEntry: BerryConfigEntry) {
         defaultEntry.minYield = defaultEntry.minYield.coerceIn(GLOBAL_MIN_YIELD_BOUND, MAX_YIELD_CAP)
@@ -551,10 +547,10 @@ object DynamicConfig {
     }
 
     /**
-     * Validates individual berry overrides, permitting 0 values while guaranteeing that maximum yield values
-     * do not exceed MAX_YIELD_CAP (6) and are never lower than specified minimum yield values when defined.
+     * Keeps a berry override within bounds. `0` means "use the default", and the max yield stays between the min yield
+     * and [MAX_YIELD_CAP].
      *
-     * @param override Unitary berry configuration entry.
+     * @param override Berry override.
      */
     private fun sanitizeUnitaryBerryOverride(override: BerryConfigEntry) {
         if (override.minYield > MAX_YIELD_CAP) {
@@ -575,13 +571,10 @@ object DynamicConfig {
     }
 
     /**
-     * Resolves the effective [BerryConfigEntry] for a given berry path identifier.
+     * Gets the settings of a berry: its override, with the non-positive fields taken from
+     * [ConfigData.defaultBerryConfig], and the yield kept under [MAX_YIELD_CAP].
      *
-     * Merges non-positive fields with [ConfigData.defaultBerryConfig] fallbacks and guarantees max bounds
-     * strictly conform to limits at runtime.
-     *
-     * @param berryId Full string identifier of the berry.
-     * @return Evaluated berry entry with default fallbacks and maximum limits applied.
+     * @param berryId Full id of the berry.
      */
     @JvmStatic
     fun getConfigFor(berryId: String): BerryConfigEntry {
@@ -605,12 +598,9 @@ object DynamicConfig {
     }
 
     /**
-     * Resolves the effective [PokeBallConfigEntry] for a given custom Poké Ball identifier.
+     * Gets the catch rates of a custom ball: its override, with the `0` fields taken from its tier's defaults.
      *
-     * Evaluates category fallbacks based on ball naming/package conventions and merges individual 0-value fallbacks.
-     *
-     * @param ballId Path identifier string of the Poké Ball.
-     * @return Evaluated capture rate entry with fallbacks applied.
+     * @param ballId Path of the ball.
      */
     @JvmStatic
     fun getPokeBallConfigFor(ballId: String): PokeBallConfigEntry {
@@ -626,25 +616,17 @@ object DynamicConfig {
     }
 
     /**
-     * Serializes the current active configuration into a JSON string for network transmission.
-     *
-     * Leverages the existing GSON instance to convert the in-memory [ConfigData]
-     * object into a raw UTF-8 compatible string.
-     *
-     * @return Raw JSON string representation of the active configuration.
+     * Writes the config as JSON to send it to clients.
      */
     fun serializeToString(): String {
         return NETWORK_GSON.toJson(data)
     }
 
     /**
-     * Overwrites the active in-memory configuration with data provided by the server.
+     * Replaces the config with the one sent by the server, after sanitizing it. The client keeps its own
+     * [ConfigData.caracatronScreenColor], since it's a personal choice.
      *
-     * Parses the incoming JSON payload and instantly applies bounds validation
-     * to ensure structural integrity before replacing the client's local data. The client keeps its own
-     * [ConfigData.caracatronScreenColor], since it's a visual preference.
-     *
-     * @param json Valid JSON string received from the dedicated server's payload.
+     * @param json Config sent by the server.
      */
     fun loadFromJsonString(json: String) {
         val serverData = runCatching { GSON.fromJson(json, ConfigData::class.java) }.getOrNull() ?: return
@@ -655,10 +637,9 @@ object DynamicConfig {
     }
 
     /**
-     * Determines the fallback default configuration from the Poké Ball's [BallTier].
+     * Default catch rates for a ball's [BallTier], the regular ones for unknown balls.
      *
-     * @param cleanId Lowercase path identifier of the Poké Ball.
-     * @return Resolved default [PokeBallConfigEntry] for the ball's tier, or the regular one for unknown balls.
+     * @param cleanId Lowercase path of the ball.
      */
     private fun resolveCategoryDefault(cleanId: String): PokeBallConfigEntry {
         return when (CustomBallRegistry.getBallByName(cleanId)?.props?.tier) {

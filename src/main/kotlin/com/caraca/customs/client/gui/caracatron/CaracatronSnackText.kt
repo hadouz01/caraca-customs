@@ -1,5 +1,6 @@
 package com.caraca.customs.client.gui.caracatron
 
+import com.caraca.customs.network.CaracatronRecipe
 import com.caraca.customs.network.CaracatronSnackSeasoning
 import com.caraca.customs.network.CaracatronSpawnInfoPayload
 import com.cobblemon.mod.common.api.pokemon.stats.Stats
@@ -14,11 +15,9 @@ import net.minecraft.resources.ResourceLocation
 import net.minecraft.util.FormattedCharSequence
 
 /**
- * Turns the Poké Snack data of a species into the lines of the Caracatron's snack tab: the snack recipe, every
- * seasoning that attracts the species, the names of the best ones to put in it and how Cobblemon combines them.
- *
- * Seasonings with more than one matching effect of the same kind (e.g. a berry covering both egg groups of the species)
- * are shown in a single line.
+ * Lines of the snack tab: the best seasonings for the species, the Poké Snack and Poké Bait Campfire Pot grids (with
+ * those seasonings), every seasoning that attracts the species and how Cobblemon combines them. Items are listed after
+ * their icon, and a seasoning matching the same kind of effect twice (like both egg groups) takes a single line.
  *
  * @author hadouz01
  * @since 1.15.0
@@ -40,65 +39,98 @@ object CaracatronSnackText {
     private const val MAX_SEASONINGS = 3
 
     private val POKE_SNACK = ResourceLocation.fromNamespaceAndPath("cobblemon", "poke_snack")
+    private val POKE_BAIT = ResourceLocation.fromNamespaceAndPath("cobblemon", "poke_bait")
 
     /**
      * Builds and wraps the snack tab lines.
      *
      * @param info Spawn pool and Poké Snack data of the selected species.
      * @param species Selected species, used to pick the recommended seasonings.
+     * @param hovered Item name under the mouse, drawn in [linkColor].
+     * @param linkColor RGB color of the hovered item name.
      * @param font Font used to wrap the lines.
      * @param width Wrapping width, in font units.
      * @return The wrapped lines, blank ones included as spacing.
      */
-    fun lines(info: CaracatronSpawnInfoPayload, species: Species, font: Font, width: Int): List<CaracatronInfoLine> {
-        val lines = mutableListOf<CaracatronInfoLine>()
-
-        fun add(component: Component, color: Int = CaracatronSpawnText.TEXT_COLOR) {
-            font.split(component, width).forEach { lines += CaracatronInfoLine(it, color) }
-        }
-
-        fun space() {
-            lines += CaracatronInfoLine(FormattedCharSequence.EMPTY, CaracatronSpawnText.TEXT_COLOR)
-        }
-
-        add(itemName(POKE_SNACK).copy().withStyle(ChatFormatting.BOLD), CaracatronSpawnText.TITLE_COLOR)
-        if (info.snackRecipe.isNotEmpty()) {
-            add(tr("recipe").withStyle(ChatFormatting.BOLD), CaracatronSpawnText.TITLE_COLOR)
-            info.snackRecipe.forEach { add(Component.literal("- ").append(tr("ingredient", it.count, hoverableName(it.item)))) }
-        }
-        space()
-
-        if (info.entries.isEmpty()) {
-            add(tr("no_spawns"))
-            return lines
-        }
-
+    fun lines(
+        info: CaracatronSpawnInfoPayload,
+        species: Species,
+        hovered: ResourceLocation?,
+        linkColor: Int,
+        font: Font,
+        width: Int
+    ): List<CaracatronInfoLine> {
+        val out = CaracatronInfoLines(font, width)
         val herdOnly = info.entries.all { it.isHerd }
         val seasonings = info.snackSeasonings.filter { !herdOnly || it.effect == RARITY }
+        val recommended = if (info.entries.isEmpty()) emptyList() else recommended(info, species, seasonings)
+        fun name(item: ResourceLocation) = hoverableName(item, hovered, linkColor)
 
-        if (seasonings.isEmpty()) {
-            add(tr("none"))
-        } else {
-            add(tr("seasonings").withStyle(ChatFormatting.BOLD), CaracatronSpawnText.TITLE_COLOR)
-            seasonings.groupBy { it.item to it.effect }.forEach { (key, group) -> add(seasoningLine(key.first, key.second, group)) }
+        if (recommended.isNotEmpty()) {
+            title(out, tr("recommended"))
+            recommended.forEach { group -> itemLine(out, group.first().item, name(group.first().item).withStyle(ChatFormatting.BOLD)) }
+            out.space()
         }
 
-        val recommended = recommended(info, species, seasonings)
-        if (recommended.isNotEmpty()) {
-            space()
-            add(tr("recommended").withStyle(ChatFormatting.BOLD), CaracatronSpawnText.TITLE_COLOR)
-            recommended.forEach { group -> add(Component.literal("- ").append(hoverableName(group.first().item).withStyle(ChatFormatting.BOLD))) }
+        val side = List(MAX_SEASONINGS) { recommended.getOrNull(it)?.first()?.item }
+        recipe(out, itemName(POKE_SNACK).copy(), info.snackRecipe, side, POKE_SNACK)
+        recipe(out, tr("bait_title"), info.baitRecipe, side, POKE_BAIT)
+
+        if (info.entries.isEmpty()) {
+            out.add(tr("no_spawns"))
+            return out.lines
+        }
+
+        if (seasonings.isEmpty()) {
+            out.add(tr("none"))
+        } else {
+            title(out, tr("seasonings"))
+            seasonings.groupBy { it.item to it.effect }.forEach { (key, group) ->
+                itemLine(out, key.first, seasoningLine(name(key.first), key.second, group))
+            }
         }
 
         if (seasonings.any { it.effect == TYPING || it.effect == EGG_GROUP }) {
-            space()
-            add(tr("stacking"))
+            out.space()
+            out.add(tr("stacking"))
         }
         if (info.entries.any { it.isHerd }) {
-            space()
-            add(tr("herds"))
+            out.space()
+            out.add(tr("herds"))
         }
-        return lines
+        return out.lines
+    }
+
+    /**
+     * Adds a Campfire Pot recipe: its title, the ingredients heading and the pot's grid, with the recommended seasonings
+     * in the column right of it and the result after the arrow.
+     */
+    private fun recipe(out: CaracatronInfoLines, title: MutableComponent, recipe: CaracatronRecipe?, side: List<ResourceLocation?>, result: ResourceLocation) {
+        if (recipe == null) return
+        title(out, title)
+        title(out, tr("recipe"))
+        out.grid(CaracatronRecipeGrid(recipe.width, recipe.grid, side = side, result = result, resultCount = recipe.count))
+        out.space()
+    }
+
+    private fun title(out: CaracatronInfoLines, text: MutableComponent) = out.add(text.withStyle(ChatFormatting.BOLD), CaracatronSpawnText.TITLE_COLOR)
+
+    /**
+     * Adds a line after an item's icon, centered on the icon when it fits in one line.
+     */
+    private fun itemLine(out: CaracatronInfoLines, item: ResourceLocation, text: Component) {
+        val split = out.split(text, CaracatronInfoLine.ICON_INDENT)
+        val single = split.size < 2
+        split.forEachIndexed { index, line ->
+            out.lines += CaracatronInfoLine(
+                line,
+                CaracatronSpawnText.TEXT_COLOR,
+                if (index == 0) item else null,
+                indented = true,
+                textOffset = if (single) CaracatronInfoLine.HALF_LINE else 0
+            )
+        }
+        if (single) out.lines += CaracatronInfoLine(FormattedCharSequence.EMPTY, CaracatronSpawnText.TEXT_COLOR, indented = true)
     }
 
     /**
@@ -132,8 +164,8 @@ object CaracatronSnackText {
         return (picks + extras).take(MAX_SEASONINGS)
     }
 
-    private fun seasoningLine(item: ResourceLocation, effect: String, group: List<CaracatronSnackSeasoning>): Component {
-        val name = hoverableName(item).withStyle(ChatFormatting.BOLD)
+    private fun seasoningLine(item: MutableComponent, effect: String, group: List<CaracatronSnackSeasoning>): Component {
+        val name = item.withStyle(ChatFormatting.BOLD)
         val value = CaracatronSpawnText.number(group.maxOf { it.value })
         val line = when (effect) {
             TYPING -> tr("type", name, CaracatronSpawnText.join(group.map { typeName(it.target) }), value)
@@ -141,17 +173,19 @@ object CaracatronSnackText {
             EV -> tr("ev", name, CaracatronSpawnText.join(group.map { Stats.getStat(it.target).displayName }))
             else -> tr("rarity", name)
         }
-        return Component.literal("- ").append(line)
+        return line
     }
 
     private fun itemName(id: ResourceLocation): Component = BuiltInRegistries.ITEM.get(id).description
 
     /**
      * Names an item and marks it with its identifier as the style's insertion ([ITEM_INSERTION] prefixed), so the screen
-     * can tell which item is under the mouse and show how to get it ([CaracatronItemSourceText]).
+     * can tell which item is under the mouse, show how to get it ([CaracatronItemSourceText]) and open it on the materials
+     * page when clicked. The hovered item takes the link color.
      */
-    private fun hoverableName(id: ResourceLocation): MutableComponent {
-        return itemName(id).copy().withStyle { it.withInsertion("$ITEM_INSERTION$id") }
+    private fun hoverableName(id: ResourceLocation, hovered: ResourceLocation?, linkColor: Int): MutableComponent {
+        val name = itemName(id).copy().withStyle { it.withInsertion("$ITEM_INSERTION$id") }
+        return if (id == hovered) name.withStyle { it.withColor(linkColor).withUnderlined(true) } else name
     }
 
     private fun typeName(name: String): Component {

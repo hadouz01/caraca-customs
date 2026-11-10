@@ -14,19 +14,11 @@ import net.minecraft.world.item.ItemStack
 import java.util.concurrent.CompletableFuture
 
 /**
- * Item models of the Caracatron 3000, built like Cobblemon's Pokédex: a flat sprite in inventories and item frames
- * (`item/caracatron_3000`, the item's own model) and a 3D handheld device everywhere else.
+ * Item models of the Caracatron, like Cobblemon's Pokédex: a flat sprite in GUIs and item frames and a 3D device
+ * everywhere else, swapped in by `CaracatronItemRendererMixin`.
  *
- * The 3D model has its screen on while the Caracatron can be opened (held in the main hand, or in the off hand with no
- * other Caracatron in the main one) and off otherwise. The screen that's on follows the player's own screen color
- * ([com.caraca.customs.config.ConfigData.caracatronScreenColor]): every color folder has a model in
- * `models/item/caracatrons/screens/<folder>.json`, a child of `item/caracatron_3000_model` with that color's screen
- * texture, so resource packs can add screens for their colors. Since the color is the viewer's preference, every
- * Caracatron the player sees, their own or other players', shows the player's color. Without a model for the color, the
- * default color's screen is used.
- *
- * Every 3D model is loaded as an extra model, since no item points at them, and swapped in by
- * `CaracatronItemRendererMixin`.
+ * The 3D screen is on while the Caracatron can be opened and shows the viewer's own screen color
+ * (`models/item/caracatrons/screens/<color>.json`), falling back to the default color.
  *
  * @author hadouz01
  * @since 1.18.0

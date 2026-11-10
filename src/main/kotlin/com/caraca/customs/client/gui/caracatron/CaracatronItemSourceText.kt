@@ -8,14 +8,8 @@ import net.minecraft.network.chat.MutableComponent
 import net.minecraft.resources.ResourceLocation
 
 /**
- * Tooltips telling how to get an item of the Caracatron's Poké Snack tab, one entry per line like the biome group
- * tooltips ([CaracatronBiomeTags]):
- *
- * - Berries: the Overworld biomes their trees grow in naturally (or "any Overworld biome"), each with where the biome
- *   comes from, and the pairs of berries that mutate into them when planted side by side.
- * - Other items: the ingredients of a recipe making them, with the station it's made at.
- *
- * Items that are neither grown nor made say they're found in the world.
+ * Tooltips telling how to get a snack tab item: where a berry grows and its mutations, or a recipe making it. Items that
+ * are neither just say they're found in the world.
  *
  * @author hadouz01
  * @since 1.23.0
@@ -49,9 +43,11 @@ object CaracatronItemSourceText {
             lines += source.mutations.map { (first, second) -> indented(tr("mutation", itemName(first), itemName(second))) }
         }
 
-        if (source.recipe.isNotEmpty()) {
-            lines += tr("recipe", stationName(source.recipeType))
-            lines += source.recipe.map { indented(Component.translatable("text.caraca_customs.caracatron.snack.ingredient", it.count, itemName(it.item))) }
+        source.recipes.firstOrNull()?.let { recipe ->
+            lines += tr("recipe", stationName(recipe.type))
+            recipe.ingredients.forEach {
+                lines += indented(Component.translatable("text.caraca_customs.caracatron.snack.ingredient", it.count, itemName(it.item)))
+            }
         }
 
         if (lines.size == 1) lines += tr("found").withStyle(ChatFormatting.GRAY)
@@ -59,7 +55,7 @@ object CaracatronItemSourceText {
     }
 
     /**
-     * Names the station a recipe type is made at, e.g. "Crafting Table" for `minecraft:crafting`, or a readable version
+     * Names the station a recipe type is made at, like "Crafting Table" for `minecraft:crafting`, or a readable version
      * of the type when there's no translation.
      */
     internal fun stationName(recipeType: String): Component {

@@ -10,12 +10,8 @@ import net.minecraft.tags.TagKey
 import java.util.Locale
 
 /**
- * Tooltips listing the biomes of a biome tag on the Caracatron's spawn panel, e.g. every biome in "Forest".
- *
- * Biome tags reach the client with the rest of the server's tags, so the list follows the datapacks loaded on the server:
- * Minecraft's biomes along with the ones from installed biome mods that add themselves to the tag. Each biome takes a
- * line, followed by where it comes from: "Vanilla" for Minecraft's, otherwise the name of the mod owning its namespace,
- * or the namespace itself for datapacks. Vanilla biomes come first, then each source in alphabetical order.
+ * Tooltip listing the biomes of a biome tag on the Caracatron, like every biome in "Forest". Tags come from the server,
+ * so modded biomes show up too, each one with where it comes from (Vanilla, the mod's name or the datapack namespace).
  *
  * @author hadouz01
  * @since 1.19.0
@@ -25,6 +21,7 @@ object CaracatronBiomeTags {
     private const val KEY = "text.caraca_customs.caracatron.biome_tag"
     private const val VANILLA = "minecraft"
     private const val MIN_SHOWN_BIOMES = 2
+    private const val BULLET = "• "
 
     /**
      * A biome of the tag and where it comes from.
@@ -45,17 +42,17 @@ object CaracatronBiomeTags {
             .map { holders -> holders.mapNotNull { holder -> holder.unwrapKey().orElse(null)?.location() } }
             .orElse(emptyList())
 
-        val title = CaracatronSpawnText.biomeName(tag).copy().withStyle(ChatFormatting.BOLD)
+        val title = CaracatronSpawnText.biomeName(tag, marked = false).copy().withStyle(ChatFormatting.BOLD)
         if (biomes.isEmpty()) return listOf(title, Component.translatable("$KEY.empty").withStyle(ChatFormatting.GRAY))
         return listOf(title) + biomeLines(biomes)
     }
 
     /**
-     * Names biomes one per line, each followed by where it comes from, vanilla biomes first, then each source in
-     * alphabetical order.
+     * Names biomes one per line after a bullet, each followed by where it comes from, vanilla biomes first, then each
+     * source in alphabetical order.
      *
      * @param biomes Biome identifiers.
-     * @return One line per biome, e.g. "Birch Forest (Vanilla)".
+     * @return One line per biome, like "• Birch Forest (Vanilla)".
      */
     fun biomeLines(biomes: List<ResourceLocation>): List<Component> {
         return biomes
@@ -63,8 +60,17 @@ object CaracatronBiomeTags {
             .sortedWith(compareBy<Biome>({ !it.isVanilla }, { it.source.lowercase() }, { it.name.string }))
             .map { biome ->
                 val source = if (biome.isVanilla) Component.translatable("$KEY.vanilla") else Component.literal(biome.source)
-                Component.translatable("$KEY.entry", biome.name, source.withStyle(ChatFormatting.GRAY))
+                Component.literal(BULLET).append(Component.translatable("$KEY.entry", biome.name, source.withStyle(ChatFormatting.GRAY)))
             }
+    }
+
+    /**
+     * Builds the tooltip of a cut biome list: every biome left out, one per line after a bullet.
+     *
+     * @param biomes Biome and biome group ids (`#` prefixed).
+     */
+    fun listTooltip(biomes: List<String>): List<Component> {
+        return biomes.map { Component.literal(BULLET).append(CaracatronSpawnText.biomeName(it)) }
     }
 
     /**

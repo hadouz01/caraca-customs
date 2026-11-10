@@ -14,10 +14,7 @@ import net.minecraft.network.chat.TextColor
 import net.minecraft.world.item.ItemStack
 
 /**
- * Client-side event handler responsible for formatting and appending custom Poké Ball tooltips.
- *
- * Dynamically resolves real-time catch rate multipliers, applies hex-colored elemental types,
- * and formats translatable components without discarding nested style attributes.
+ * Adds the custom Poké Ball tooltips: live catch rates and colored elemental types.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -25,7 +22,7 @@ import net.minecraft.world.item.ItemStack
 object CustomBallTooltipHandler {
 
     /**
-     * Hooks into Fabric's [ItemTooltipCallback] pipeline.
+     * Registers the tooltip callback.
      */
     fun register() {
         ItemTooltipCallback.EVENT.register { stack, _, _, lines ->
@@ -34,10 +31,10 @@ object CustomBallTooltipHandler {
     }
 
     /**
-     * Appends dynamic capture rate and colorized elemental type tooltips to custom Poké Ball items.
+     * Adds the catch rates and colored elemental types to a custom Poké Ball's tooltip.
      *
-     * @param stack The targeted inventory item stack.
-     * @param lines Mutable list of tooltip components attached to the item.
+     * @param stack Hovered item.
+     * @param lines Tooltip lines.
      */
     private fun appendBallTooltip(stack: ItemStack, lines: MutableList<Component>) {
         val matchingBall = CustomBallRegistry.getBallByItem(stack.item) ?: return
@@ -65,10 +62,9 @@ object CustomBallTooltipHandler {
     }
 
     /**
-     * Formats floating-point multipliers removing trailing decimals when applicable.
+     * Writes a multiplier without trailing zeros, like `2` or `1.5`.
      *
-     * @param rate Raw catch rate multiplier.
-     * @return Clean string representation of the rate.
+     * @param rate Catch rate multiplier.
      */
     private fun formatMultiplier(rate: Float): String {
         return if (rate % 1.0f == 0.0f) {
@@ -79,10 +75,9 @@ object CustomBallTooltipHandler {
     }
 
     /**
-     * Maps each elemental type into individual colorized [Component] instances.
+     * Turns the ball's types into colored type names.
      *
-     * @param types Target set of elemental types associated with the Poké Ball.
-     * @return List of colorized type text components.
+     * @param types Types of the ball.
      */
     private fun formatElementalTypesAsComponents(types: Set<ElementalType>): List<Component> {
         return types.map { type ->
@@ -95,10 +90,9 @@ object CustomBallTooltipHandler {
     }
 
     /**
-     * Resolves elemental types to precise 24-bit RGB HEX color values.
+     * RGB color of a type's name.
      *
-     * @param type Target elemental type.
-     * @return Integer representation of the target RGB color.
+     * @param type Elemental type.
      */
     private fun resolveElementalHexColor(type: ElementalType): Int {
         return when (type) {

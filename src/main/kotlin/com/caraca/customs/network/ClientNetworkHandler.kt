@@ -6,11 +6,8 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
 
 /**
- * Client-side network manager responsible for receiving configuration payloads and the Caracatron 3000 screen data
- * from the server, updating the local in-memory representation and opening or filling the Caracatron screen.
- *
- * The client's own configuration file is reloaded on disconnect so server values
- * never leak into later singleplayer sessions or other servers.
+ * Client side of the mod's packets: config sync and the Caracatron's screen data. The client's own config file is
+ * loaded back on disconnect, so server values never leak into other worlds.
  *
  * @author hadouz01
  * @since 1.0.0

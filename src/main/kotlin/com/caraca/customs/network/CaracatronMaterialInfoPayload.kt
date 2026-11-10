@@ -21,7 +21,7 @@ import net.minecraft.resources.ResourceLocation
  * @property peakMin Bottom of the most common altitude range, `null` when the altitudes are all as common.
  * @property peakMax Top of the most common altitude range.
  * @property biasedLow Whether lower altitudes are more common.
- * @property perChunk How many times it's tried per chunk, e.g. `16` or `1-3`, empty when unknown.
+ * @property perChunk How many times it's tried per chunk, like `16` or `1-3`, empty when unknown.
  * @property rarity Chunks per try (`1 in N chunks`), `0` when it's tried in every chunk.
  * @property size Most blocks in a vein, `0` when it isn't an ore vein.
  *
@@ -46,7 +46,7 @@ data class CaracatronMaterialSpot(
     /**
      * Writes this spot to a buffer.
      *
-     * @param buf Target buffer.
+     * @param buf Buffer to write to.
      */
     fun write(buf: FriendlyByteBuf) {
         buf.writeUtf(kind)
@@ -112,7 +112,7 @@ data class CaracatronMaterialStructure(val structure: ResourceLocation, val dime
     /**
      * Writes this structure to a buffer.
      *
-     * @param buf Target buffer.
+     * @param buf Buffer to write to.
      */
     fun write(buf: FriendlyByteBuf) {
         buf.writeResourceLocation(structure)
@@ -139,10 +139,10 @@ data class CaracatronMaterialStructure(val structure: ResourceLocation, val dime
  * A block that generates in the world and is, or drops, the searched item.
  *
  * @property block Block identifier.
- * @property dropsItem Whether the block drops the item when mined, instead of being the item itself (e.g. Iron Ore for
+ * @property dropsItem Whether the block drops the item when mined, instead of being the item itself (like Iron Ore for
  * Raw Iron).
  * @property spots Every place the block generates in naturally.
- * @property structures Every structure the block is part of (since 1.28.0).
+ * @property structures Every structure the block is part of.
  *
  * @author hadouz01
  * @since 1.27.0
@@ -157,7 +157,7 @@ data class CaracatronMaterialBlock(
     /**
      * Writes this block to a buffer.
      *
-     * @param buf Target buffer.
+     * @param buf Buffer to write to.
      */
     fun write(buf: FriendlyByteBuf) {
         buf.writeResourceLocation(block)
@@ -186,7 +186,7 @@ data class CaracatronMaterialBlock(
  * A loot table holding the searched item that's found in the world.
  *
  * @property kind [BRUSH] for suspicious blocks dug up with a brush, or [CHEST] for chests and other containers.
- * @property block Block holding the loot (e.g. `minecraft:suspicious_gravel`), `null` when unknown.
+ * @property block Block holding the loot (like `minecraft:suspicious_gravel`), `null` when unknown.
  * @property place Structure or feature generating that block, `null` when unknown.
  * @property table Loot table identifier, named on the panel when there's no [place].
  * @property dimension Dimension of [place], `null` when unknown.
@@ -208,7 +208,7 @@ data class CaracatronMaterialLoot(
     /**
      * Writes this loot to a buffer.
      *
-     * @param buf Target buffer.
+     * @param buf Buffer to write to.
      */
     fun write(buf: FriendlyByteBuf) {
         buf.writeUtf(kind)

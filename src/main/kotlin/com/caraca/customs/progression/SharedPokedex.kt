@@ -50,7 +50,7 @@ object SharedPokedex {
      * Records a player as a catcher of a species.
      *
      * @param playerId Player UUID.
-     * @param speciesId Species identifier, e.g. `cobblemon:bulbasaur`.
+     * @param speciesId Species identifier, like `cobblemon:bulbasaur`.
      * @return Whether the species just started counting for the shared pool.
      */
     fun contribute(playerId: UUID, speciesId: ResourceLocation): Boolean {

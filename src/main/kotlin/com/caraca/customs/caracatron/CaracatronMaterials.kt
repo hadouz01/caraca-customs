@@ -45,34 +45,16 @@ import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
 /**
- * Works out where the items of the Caracatron's materials page come from, answering [CaracatronMaterialRequestPayload].
+ * Works out where an item comes from for the Caracatron's materials page. Worldgen isn't sent to the client, so it runs
+ * on the server, reading the registries through their own codecs, which covers datapacks and other mods too.
  *
- * World generation isn't sent to the client, so everything runs on the server, read from the loaded registries through
- * their own codecs, which covers datapacks and other mods' worldgen too:
+ * It looks at the item's block and every block that drops it, then at placed features (ores keep their altitude and
+ * frequency), the noise terrain and ore veins, structure templates ([TEMPLATE_FOLDERS] for the non-jigsaw ones) and the
+ * loot tables tied to the structures or features that fill them. Structures built in code (mineshafts, strongholds,
+ * temples...) have no templates, so they're skipped.
  *
- * - **Blocks:** the block of the item, plus every block whose loot table drops it (Iron Ore for Raw Iron).
- * - **Features:** every placed feature of every biome in a loaded dimension, with the blocks its configuration places
- *   (block states found in it, leaving out the ones it only checks or replaces). Features with a height range (ores)
- *   keep their altitude, tries per chunk, rarity and vein size; the others (plants, trees, rocks) are merged per block,
- *   dimension and surface.
- * - **Terrain:** the default block and the surface rule blocks of each noise dimension, with the biomes their rules are
- *   limited to, and Minecraft's large copper and iron veins where ore veins are on.
- * - **Structures:** the blocks of every structure template a structure can use. Jigsaw structures are followed from
- *   every template pool their definition names, through the pools named by the jigsaw blocks of each template, adding
- *   each jigsaw's final state, the blocks placed by the pools' feature elements and the output blocks of their
- *   processors. Minecraft's other template structures (shipwrecks, igloos, ocean ruins, ruined portals, End cities,
- *   woodland mansions and Nether fossils) read every template in their folder ([TEMPLATE_FOLDERS]). Structures built
- *   piece by piece in code (mineshafts, strongholds, temples, fortresses, monuments, swamp huts) have no template to
- *   read and are left out.
- * - **Loot:** loot tables holding the item. Suspicious blocks filled by structure processors (`append_loot`) are tied to
- *   the features and structures using those processors, chests to the structures whose templates hold them (their
- *   `LootTable`), and `archaeology/<name>` tables to the structure or feature named `<name>`, which covers Minecraft's
- *   hard coded ones. Other chest tables are named only.
- *
- * Biome sets are written as the biome groups (`is_` tags) fully inside them, largest first, plus the biomes left over,
- * or nothing when they cover the whole dimension. Reading every structure template takes a moment, so the index is built
- * on a low priority thread on the first request (templates read as raw NBT, never cached by the server), answered once
- * it's ready, and dropped on every datapack reload.
+ * The index is heavy, so it's built once on a low priority thread on the first request and dropped on every datapack
+ * reload.
  *
  * @author hadouz01
  * @since 1.27.0
@@ -334,9 +316,10 @@ object CaracatronMaterials {
 
             val places = index.lootPlaces[table].orEmpty()
             if (places.isEmpty()) {
+                val brushed = "archaeology" in path || "fossils" in path
                 when {
-                    "chests/" in path -> chests += CaracatronMaterialLoot(CaracatronMaterialLoot.CHEST, null, null, table, null, emptyList())
-                    "archaeology" in path || "fossils" in path -> loot += CaracatronMaterialLoot(CaracatronMaterialLoot.BRUSH, null, null, table, null, emptyList())
+                    "chests/" in path -> chests += unplacedLoot(CaracatronMaterialLoot.CHEST, table)
+                    brushed -> loot += unplacedLoot(CaracatronMaterialLoot.BRUSH, table)
                 }
                 return@forEach
             }
@@ -358,6 +341,10 @@ object CaracatronMaterials {
         return loot.distinctBy { listOf(it.kind, it.block, it.place, it.table, it.dimension) } + chests.distinctBy { it.table.path }
     }
 
+    private fun unplacedLoot(kind: String, table: ResourceLocation): CaracatronMaterialLoot {
+        return CaracatronMaterialLoot(kind, null, null, table, null, emptyList())
+    }
+
     /**
      * Writes a set of biomes as the biome groups fully inside it, the ones covering the most biomes still left first,
      * followed by the biomes no group covered.
@@ -371,10 +358,13 @@ object CaracatronMaterials {
         val candidates = tags.filterValues { it.size >= MIN_TAG_BIOMES && inside.containsAll(it) }.toMutableMap()
         val left = inside.toMutableSet()
         val groups = mutableListOf<String>()
+        val order = compareBy<Map.Entry<ResourceLocation, Set<ResourceLocation>>>(
+            { entry -> entry.value.count { it in left } },
+            { -it.value.size },
+            { it.key.toString() }
+        )
         while (candidates.isNotEmpty()) {
-            val best = candidates.entries.maxWithOrNull(
-                compareBy<Map.Entry<ResourceLocation, Set<ResourceLocation>>>({ entry -> entry.value.count { it in left } }, { -it.value.size }, { it.key.toString() })
-            ) ?: break
+            val best = candidates.entries.maxWithOrNull(order) ?: break
             if (best.value.count { it in left } < MIN_TAG_BIOMES) break
             groups += "#${best.key}"
             left -= best.value
@@ -437,11 +427,16 @@ object CaracatronMaterials {
                 if (inside.isEmpty()) return@forEach
                 val altitude = altitudeOf(placement.height, dimension)
                 blocks.forEach { block ->
-                    val key = if (altitude != null) {
-                        SpotKey(block, CaracatronMaterialSpot.FEATURE, dimension.id, placement.surface, altitude, placement.perChunk, placement.rarity, size)
-                    } else {
-                        SpotKey(block, CaracatronMaterialSpot.FEATURE, dimension.id, placement.surface, null, "", 0, 0)
-                    }
+                    val key = SpotKey(
+                        block = block,
+                        kind = CaracatronMaterialSpot.FEATURE,
+                        dimension = dimension.id,
+                        surface = placement.surface,
+                        altitude = altitude,
+                        perChunk = if (altitude != null) placement.perChunk else "",
+                        rarity = if (altitude != null) placement.rarity else 0,
+                        size = if (altitude != null) size else 0
+                    )
                     addSpot(key, inside)
                 }
             }
@@ -638,10 +633,10 @@ object CaracatronMaterials {
         } else {
             listOf(tag.getList("palette", Tag.TAG_COMPOUND.toInt()))
         }
-        val names = palettes.firstOrNull()?.map { ResourceLocation.tryParse((it as CompoundTag).getString("Name")) }.orEmpty()
+        val names = palettes.firstOrNull()?.map(::stateName).orEmpty()
 
         val blocks = HashSet<ResourceLocation>()
-        palettes.forEach { palette -> palette.forEach { state -> ResourceLocation.tryParse((state as CompoundTag).getString("Name"))?.let { blocks += it } } }
+        palettes.forEach { palette -> palette.mapNotNullTo(blocks, ::stateName) }
 
         val pools = HashSet<ResourceLocation>()
         val loot = mutableListOf<LootLink>()
@@ -651,14 +646,18 @@ object CaracatronMaterials {
             val nbt = block.getCompound("nbt")
             if (nbt.contains("pool")) ResourceLocation.tryParse(nbt.getString("pool"))?.let { pools += it }
             if (nbt.contains("final_state")) {
-                ResourceLocation.tryParse(nbt.getString("final_state").substringBefore('[').substringBefore('{'))?.let { blocks += it }
+                val finalState = nbt.getString("final_state").substringBefore('[').substringBefore('{')
+                ResourceLocation.tryParse(finalState)?.let { blocks += it }
             }
             if (nbt.contains("LootTable")) {
-                ResourceLocation.tryParse(nbt.getString("LootTable"))?.let { table -> loot += LootLink(table, names.getOrNull(block.getInt("state"))) }
+                val container = names.getOrNull(block.getInt("state"))
+                ResourceLocation.tryParse(nbt.getString("LootTable"))?.let { loot += LootLink(it, container) }
             }
         }
         return TemplateContents(blocks.filterTo(HashSet(), BuiltInRegistries.BLOCK::containsKey), pools, loot)
     }
+
+    private fun stateName(state: Tag): ResourceLocation? = ResourceLocation.tryParse((state as CompoundTag).getString("Name"))
 
     /**
      * Reads a template's NBT straight from its `structure/<path>.nbt` resource, without building a `StructureTemplate`
@@ -903,7 +902,7 @@ object CaracatronMaterials {
     }
 
     /**
-     * Writes an int provider as a number or a range, e.g. `16` or `1-3`, empty when it can't be told.
+     * Writes an int provider as a number or a range, like `16` or `1-3`, empty when it can't be told.
      */
     private fun intText(element: JsonElement?): String {
         if (element is JsonPrimitive && element.isNumber) return element.asInt.toString()

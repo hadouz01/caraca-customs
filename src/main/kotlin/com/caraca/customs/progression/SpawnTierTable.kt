@@ -13,14 +13,9 @@ import kotlin.math.ceil
 /**
  * Final spawn rate multiplier of every [SpawnGroup] at every tier.
  *
- * Starts from [SpawnRateRules], then makes sure each tier offers enough species to reach the next one: if the species
- * that can naturally spawn in a tier (counted from Cobblemon's world spawn pool, so species without natural spawns don't
- * count) are fewer than what the next tier needs plus [com.caraca.customs.config.ConfigData.tierSpeciesSurplus],
- * the next groups by starting tier (the ones with more spawnable species first, on ties) are unlocked early, at their
- * early tier rate, until the gap is filled. A group unlocked this way keeps spawning in the following tiers.
- *
- * With the default settings no group needs to be unlocked early. The table is rebuilt when the server starts, after
- * datapack reloads, and lazily after the config or the spawn groups change.
+ * Starts from [SpawnRateRules], then makes sure every tier has enough spawnable species to reach the next one, plus
+ * [com.caraca.customs.config.ConfigData.tierSpeciesSurplus]. When it doesn't, the next groups get unlocked early at
+ * their early tier rate. Rebuilt on server start, datapack reloads and after config or spawn group changes.
  *
  * @author hadouz01
  * @since 1.5.3
@@ -65,7 +60,7 @@ object SpawnTierTable {
     /**
      * Gets a group's spawn rate multiplier at a tier.
      *
-     * @param group Target spawn group.
+     * @param group Spawn group.
      * @param tier Player tier.
      * @return The multiplier applied to the species' original spawn rate. `0` means it can't spawn.
      */
@@ -79,7 +74,7 @@ object SpawnTierTable {
      * Reduced rate tiers before the starting tier don't count, so a group starting at tier 5 belongs to tier 5 even
      * though it already spawns at a lower rate in tier 4.
      *
-     * @param group Target spawn group.
+     * @param group Spawn group.
      * @return The group's tier, from 1 to the tier count.
      */
     fun homeTierOf(group: SpawnGroup): Int {
@@ -140,7 +135,7 @@ object SpawnTierTable {
     /**
      * Collects every species with natural spawns in Cobblemon's world spawn pool, herd members included.
      *
-     * @return The spawnable species, or `null` when the spawn pool isn't loaded (e.g. on the client).
+     * @return The spawnable species, or `null` when the spawn pool isn't loaded (like on the client).
      */
     fun spawnableSpecies(): Set<ResourceLocation>? {
         val details = runCatching { CobblemonSpawnPools.WORLD_SPAWN_POOL.details.toList() }.getOrNull() ?: return null

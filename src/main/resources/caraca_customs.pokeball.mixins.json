@@ -3,6 +3,8 @@
 	"package": "com.caraca.customs.mixin.pokeball",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
+		"BallCornerFillMixin",
+		"BallMaterialTagMixin",
 		"PokemonPropertiesPokeBallMixin",
 		"PropertiesCompletionProviderMixin",
 		"ShapedRecipeResultMixin"

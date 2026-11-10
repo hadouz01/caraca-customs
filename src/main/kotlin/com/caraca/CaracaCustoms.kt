@@ -22,13 +22,10 @@ import net.minecraft.resources.ResourceLocation
 import org.slf4j.LoggerFactory
 
 /**
- * Main entrypoint for the `caraca_customs` Fabric mod.
+ * Main entrypoint of Caraca Customs.
  *
- * Implements [ModInitializer] to hook into Fabric's lifecycle initialization phase,
- * triggering registration of custom Poké Balls and Berry mechanics.
- *
- * Custom Poké Balls are registered before [DynamicConfig.load] so the configuration file
- * can be populated with an override entry for every registered ball.
+ * Custom Poké Balls are registered before [DynamicConfig.load], so the config file gets an override entry for every
+ * ball.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -69,10 +66,9 @@ object CaracaCustoms : ModInitializer {
 	}
 
 	/**
-	 * Utility factory function to construct namespaced [ResourceLocation] instances under [MOD_ID].
+	 * Builds an id in the mod's namespace.
 	 *
-	 * @param path The relative path string within the mod's domain.
-	 * @return A fully qualified [ResourceLocation] under the `caraca_customs` namespace.
+	 * @param path Path of the id.
 	 */
 	fun id(path: String): ResourceLocation = ResourceLocation.fromNamespaceAndPath(MOD_ID, path)
 }

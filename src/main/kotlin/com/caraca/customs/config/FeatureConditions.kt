@@ -51,7 +51,7 @@ object FeatureConditions {
     /**
      * Builds a loot condition for a feature, used by code-injected loot pools.
      *
-     * @param feature Target feature.
+     * @param feature Feature.
      * @return A loot condition passing only while the feature is enabled.
      */
     fun lootCondition(feature: Feature): LootItemCondition.Builder = LootItemCondition.Builder { FeatureLootCondition(feature) }

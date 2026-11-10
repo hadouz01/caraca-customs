@@ -8,11 +8,8 @@ import net.minecraft.resources.ResourceLocation
 import java.util.Locale
 
 /**
- * Screen colors of the Caracatron 3000.
- *
- * Every folder in `assets/caraca_customs/textures/gui/caracatron/colors/` holding a `caracatron_screen.png` is a color,
- * so a resource pack can add new ones just by adding a folder with the screen parts. Icons and slots don't change with
- * the color, they all live in `textures/gui/caracatron/icons/`. Names come from the folder name ([displayName]).
+ * Screen colors of the Caracatron. Every folder in `textures/gui/caracatron/colors/` with a `caracatron_screen.png` is a
+ * color, so resource packs can add their own. Icons and slots live in `icons/` and are the same for every color.
  *
  * @author hadouz01
  * @since 1.16.0
@@ -60,7 +57,7 @@ object CaracatronColors {
     }
 
     /**
-     * Gets a screen part of a color, e.g. `caracatron_screen` or `type_bar`.
+     * Gets a screen part of a color, like `caracatron_screen` or `type_bar`.
      *
      * @param folder Folder name of the color.
      * @param name Texture name, without the extension.
@@ -68,7 +65,7 @@ object CaracatronColors {
     fun part(folder: String, name: String): ResourceLocation = CaracaCustoms.id("$COLORS/$folder/$name.png")
 
     /**
-     * Gets an icon shared by every color, e.g. `medal_icon` or `pokemon_slot_t1`.
+     * Gets an icon shared by every color, like `medal_icon` or `pokemon_slot_t1`.
      *
      * @param name Texture name, without the extension.
      */

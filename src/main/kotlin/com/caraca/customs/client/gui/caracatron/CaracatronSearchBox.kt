@@ -28,7 +28,7 @@ class CaracatronSearchBox(x: Int, y: Int, width: Int, height: Int, var placehold
 
     private companion object {
         /**
-         * Longest search, enough for item ids picked from the drops page (e.g. `cobblemon:black_augurite`). Text past the
+         * Longest search, enough for item ids picked from the drops page (like `cobblemon:black_augurite`). Text past the
          * bar is cut off.
          */
         const val MAX_LENGTH = 64

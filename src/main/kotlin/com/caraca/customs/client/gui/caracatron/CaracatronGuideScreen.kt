@@ -8,9 +8,8 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 
 /**
- * Guide page of the Caracatron 3000. Not written yet, so it only shows the empty screen of the player's color with an
- * "In construction..." notice, the page navigation to leave it and the screen color select, shared with the Caracatron
- * page ([CaracatronScreen.colorSelect]).
+ * Guide page of the Caracatron. It isn't written yet, so it only shows "In construction...", the page navigation and the
+ * color select.
  *
  * @param caracatron Caracatron screen the player opened, the one the navigation goes back to.
  *
@@ -40,7 +39,6 @@ class CaracatronGuideScreen(private val caracatron: CaracatronScreen) : Screen(C
     override fun renderMenuBackground(context: GuiGraphics) {}
 
     override fun renderBackground(context: GuiGraphics, mouseX: Int, mouseY: Int, delta: Float) {
-        renderTransparentBackground(context)
         val pose = context.pose()
         blitk(matrixStack = pose, texture = CaracatronPages.FRAME, x = left, y = top, width = BASE_WIDTH, height = BASE_HEIGHT)
         blitk(matrixStack = pose, texture = CaracatronColors.part(caracatron.folder, "caracatron_screen"), x = left, y = top, width = BASE_WIDTH, height = BASE_HEIGHT)
@@ -59,10 +57,10 @@ class CaracatronGuideScreen(private val caracatron: CaracatronScreen) : Screen(C
             font = CobblemonResources.DEFAULT_LARGE,
             centered = true
         )
-        navigation.render(context, left, top, x, y, colors)
-        colorSelect.render(context, left, top, x, y, colors)
+        navigation.render(context, left, top, x, y)
+        colorSelect.render(context, left, top, x, y, CaracatronPage.GUIDE.label())
         if (colorSelect.showsTooltip(x, y)) {
-            context.renderTooltip(font, Component.translatable("option.caraca_customs.caracatron_color"), mouseX, mouseY)
+            context.renderComponentTooltip(font, CaracatronPages.wheelTooltip(Component.translatable("option.caraca_customs.caracatron_color")), mouseX, mouseY)
         }
     }
 
@@ -89,6 +87,7 @@ class CaracatronGuideScreen(private val caracatron: CaracatronScreen) : Screen(C
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
         if (colorSelect.mouseScrolled(mouseX - left, mouseY - top, scrollY)) return true
+        if (navigation.mouseScrolled(mouseX - left, mouseY - top, scrollY)) return true
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
     }
 }

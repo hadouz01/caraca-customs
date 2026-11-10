@@ -6,14 +6,11 @@ import net.minecraft.world.item.Item
 import net.minecraft.world.item.Items
 
 /**
- * Item search of the Caracatron's materials page, over every registered item (other mods' included), built on the
- * client the first time the page searches and kept between Caracatron screens ([shared]) until the game's language
- * or item count changes.
+ * Item search of the materials page, over every registered item. It's kept between Caracatron screens ([shared]) until
+ * the language or the item count changes.
  *
- * Each item is indexed with its name in the game's language (lowercase, without accents) and its id, so "ferr" finds
- * "Ferro bruto" and "minecraft:iro" finds every Minecraft item whose id starts like that. Searches shorter than
- * [MIN_QUERY_LENGTH] list nothing, which keeps the list empty until the player starts typing. A search containing the
- * previous one (the player kept typing) only looks through the previous results.
+ * Items match by name or id from [MIN_QUERY_LENGTH] letters on, and typing more letters only filters the previous
+ * results.
  *
  * @param normalize Lowercases a text and strips its accents, the same way species names are searched.
  *

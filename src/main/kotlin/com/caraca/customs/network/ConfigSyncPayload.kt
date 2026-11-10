@@ -8,10 +8,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload
 import net.minecraft.resources.ResourceLocation
 
 /**
- * Custom payload packet responsible for transmitting serialized configuration data
- * from the server to connecting clients.
+ * Server → client packet with the server's config.
  *
- * @property configJson The full serialized JSON string representing the server's ConfigData.
+ * @property configJson The server's config as JSON.
  *
  * @author hadouz01
  * @since 1.0.0

@@ -53,6 +53,15 @@ sealed class CaracatronFilter {
     }
 
     /**
+     * Drops page only, while searching: the Pokémon dropping the most of the searched items first.
+     */
+    data object ByDrop : CaracatronFilter() {
+        override fun label(): MutableComponent = Component.translatable("$KEY.by_drop")
+        override fun tooltip(): Component = Component.translatable("$KEY.by_drop.tooltip")
+        override fun accepts(tier: Int): Boolean = true
+    }
+
+    /**
      * Only the Pokémon that belong to one tier.
      *
      * @property tier Listed tier.

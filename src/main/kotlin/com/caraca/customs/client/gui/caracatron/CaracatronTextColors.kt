@@ -9,22 +9,21 @@ import net.minecraft.network.chat.MutableComponent
 import net.minecraft.resources.ResourceLocation
 
 /**
- * Text colors of a Caracatron screen color: white on dark screens and `#191919` on light ones, so the letters stay easy
- * to read on every color.
+ * Text colors of a screen color, measured from the color's own textures so resource pack colors work too. Text on the
+ * screen is white on dark screens and `#191919` on light ones, and info panel text is `#A1A1A1` on dark panels (Noir)
+ * and the Pokédex's gray (`#5F6A6D`) on light ones. Panel titles have a color of their own per screen color
+ * ([TITLE_COLORS]). The header and the filter bar are always white ([drawHeaderText]). Screen
+ * text always has a 1 px shadow, dark under white text and white under dark text.
  *
- * The choice comes from the brightness of the color's own textures, so screen colors added by resource packs get a
- * readable text too. With the mod's colors, Noir, Cerulean and Pink get white text on the screen and Blanc, Canary and
- * Lime get `#191919`. The info panel is light on every color but Noir, so only Noir gets white text there. Text on the
- * screen itself always has a 1 px shadow: Minecraft's dark one under white text, a white one under the dark text.
- *
- * @property screen RGB color of the text drawn on the screen itself: header, search, filter, color select and page
- * navigation.
- * @property panel RGB color of the text drawn on the info panel.
+ * @property screen RGB color of the text on the screen itself, like the search bar.
+ * @property panel RGB color of the text on the info panel, the species' name and number included.
+ * @property title RGB color of the info panel titles, like the spawn headers and "Poké Snack".
+ * @property darkPanel Whether the info panel is dark.
  *
  * @author hadouz01
  * @since 1.25.3
  */
-data class CaracatronTextColors(val screen: Int, val panel: Int) {
+data class CaracatronTextColors(val screen: Int, val panel: Int, val title: Int, val darkPanel: Boolean) {
 
     /**
      * Writes a text on the screen itself in [screen] color, with its 1 px shadow ([drawShadowed]).
@@ -53,25 +52,47 @@ data class CaracatronTextColors(val screen: Int, val panel: Int) {
      * RGB color of the drop chances matching the drops page search: neon green on a dark panel, dark green on a light
      * one, so it never blends into green screens.
      */
-    val match: Int get() = if (panel == LIGHT) MATCH_ON_DARK else MATCH_ON_LIGHT
+    val match: Int get() = if (darkPanel) MATCH_ON_DARK else MATCH_ON_LIGHT
 
     /**
-     * RGB color of the labels of the materials page lines (e.g. "Overworld:" or "Altitude:") and of its links: a teal
-     * blue on light panels, a light blue on dark ones, apart from the near black or white of the titles.
+     * RGB color of the labels of the materials page lines (like "Overworld:" or "Altitude:") and of its links: a teal
+     * blue on light panels, a grayish blue on dark ones, apart from the near black or white of the titles.
      */
-    val label: Int get() = if (panel == LIGHT) LABEL_ON_DARK else LABEL_ON_LIGHT
+    val label: Int get() = if (darkPanel) LABEL_ON_DARK else LABEL_ON_LIGHT
+
+    /**
+     * RGB color of a hovered link on the info panel: a brighter blue than [label], lighter still on dark panels.
+     */
+    val linkHover: Int get() = if (darkPanel) LINK_HOVER_ON_DARK else LINK_HOVER_ON_LIGHT
 
     companion object {
         /**
-         * Text colors: white for dark surfaces, `#191919` for light ones, the [match] greens and the [label] blues for
-         * light and dark panels.
+         * Text colors: white for dark surfaces, `#191919` for light screens, the Pokédex's gray for light panels, the
+         * [match] greens and the [label] blues.
          */
         const val LIGHT = 0xFFFFFF
         const val DARK = 0x191919
-        const val MATCH_ON_LIGHT = 0x0B6B1D
+        const val PANEL_TEXT = 0x5F6A6D
+        const val DARK_PANEL_TEXT = 0xA1A1A1
+        const val MATCH_ON_LIGHT = 0x049720
         const val MATCH_ON_DARK = 0x39FF14
         const val LABEL_ON_LIGHT = 0x1E6A86
-        const val LABEL_ON_DARK = 0x8FD3FF
+        const val LABEL_ON_DARK = 0x5E7686
+        const val LINK_HOVER_ON_LIGHT = 0x1A9BD7
+        const val LINK_HOVER_ON_DARK = 0xA8D8F5
+
+        /**
+         * Info panel title colors of the mod's screen colors. Colors from resource packs use white on dark panels and the
+         * panel text color on light ones.
+         */
+        private val TITLE_COLORS = mapOf(
+            "noir" to 0xFFFFFF,
+            "blanc" to 0x000000,
+            "cerulean" to 0x004F60,
+            "pink" to 0x5D005E,
+            "lime" to 0x28472A,
+            "canary" to 0x4C4200
+        )
 
         /**
          * Shadow offset of Cobblemon's large font, in font units. It's Minecraft's Unifont (`minecraft:uniform`), whose
@@ -88,7 +109,7 @@ data class CaracatronTextColors(val screen: Int, val panel: Int) {
          * White text colors, like Cobblemon's, used until a screen color is known (the search box's first frame).
          */
         @JvmField
-        val POKEDEX = CaracatronTextColors(LIGHT, LIGHT)
+        val POKEDEX = CaracatronTextColors(LIGHT, LIGHT, LIGHT, true)
 
         /**
          * Average brightness (0 to 255) under which a surface counts as dark. Cerulean's header sits at 122 and Blanc's at
@@ -108,10 +129,36 @@ data class CaracatronTextColors(val screen: Int, val panel: Int) {
          * @param folder Folder name of the color.
          */
         fun of(folder: String): CaracatronTextColors = cache.getOrPut(folder) {
+            val darkPanel = textOn(CaracatronColors.part(folder, "caracatron_screen_info"), PANEL_SAMPLE) == LIGHT
             CaracatronTextColors(
                 screen = textOn(CaracatronColors.part(folder, "caracatron_screen"), SCREEN_SAMPLE),
-                panel = textOn(CaracatronColors.part(folder, "caracatron_screen_info"), PANEL_SAMPLE)
+                panel = if (darkPanel) DARK_PANEL_TEXT else PANEL_TEXT,
+                title = TITLE_COLORS[folder] ?: if (darkPanel) LIGHT else PANEL_TEXT,
+                darkPanel = darkPanel
             )
+        }
+
+        /**
+         * Writes a text of the header or the filter bar: white with Minecraft's own shadow, on every screen color.
+         *
+         * @param context Current GUI graphics.
+         * @param text Text to write.
+         * @param x Left edge, or center when [centered].
+         * @param y Top edge.
+         * @param font Font of the text, Minecraft's default when `null`.
+         * @param scale Scale of the text.
+         * @param centered Whether [x] is the text's center.
+         */
+        fun drawHeaderText(
+            context: GuiGraphics,
+            text: MutableComponent,
+            x: Number,
+            y: Number,
+            font: ResourceLocation? = null,
+            scale: Float = 1.0f,
+            centered: Boolean = false
+        ) {
+            drawShadowed(context, text, x, y, LIGHT, font, scale, centered)
         }
 
         /**

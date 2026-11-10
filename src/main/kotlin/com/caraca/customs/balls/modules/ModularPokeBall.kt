@@ -9,13 +9,10 @@ import com.cobblemon.mod.common.pokeball.PokeBall
 import net.minecraft.resources.ResourceLocation
 
 /**
- * Wrapper holding the structural definitions and mechanics of a custom Poké Ball:
- * identifiers, catch rate modifier, Cobblemon [PokeBall] model and its [PokeBallItem].
+ * A custom Poké Ball put together: its ids, catch rate modifier, Cobblemon [PokeBall] and [PokeBallItem]. Elemental
+ * balls use [ElementalBallCatchRateModifier], the rest use [DynamicCatchRateModifier].
  *
- * Balls with elemental types use [ElementalBallCatchRateModifier]; balls without them use
- * [DynamicCatchRateModifier].
- *
- * @property props Immutable configuration property set defining the Poké Ball.
+ * @property props Properties the ball is built from.
  *
  * @author hadouz01
  * @since 1.0.0
@@ -33,7 +30,7 @@ class ModularPokeBall(val props: CustomBallProperties) {
     val model3dId: ResourceLocation = CaracaCustoms.id("item/${props.model3dPath}_model")
 
     /**
-     * Evaluated catch rate modifier logic.
+     * Catch rate modifier of the ball.
      */
     val modifier: CatchRateModifier =
         if (props.elementalTypes.isEmpty()) {
@@ -43,7 +40,7 @@ class ModularPokeBall(val props: CustomBallProperties) {
         }
 
     /**
-     * Internal Cobblemon domain model representation.
+     * The ball as Cobblemon sees it.
      */
     val pokeBall: PokeBall = PokeBall(
         name = id,
@@ -57,7 +54,7 @@ class ModularPokeBall(val props: CustomBallProperties) {
     )
 
     /**
-     * Minecraft item representation of this Poké Ball.
+     * The ball's item.
      */
     val item: PokeBallItem by lazy { PokeBallItem(pokeBall) }
 }

@@ -1,5 +1,6 @@
 package com.caraca.customs.client.gui
 
+import com.caraca.customs.balls.BallMaterials
 import com.caraca.customs.balls.CustomBallRegistry
 import com.caraca.customs.berry.BerryGrowthModifier
 import com.caraca.customs.client.gui.caracatron.CaracatronColors
@@ -25,10 +26,9 @@ import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 
 /**
- * ModMenu API integration bridge generating dynamic Cloth Config screens.
+ * Mod Menu config screens, built with Cloth Config.
  *
- * Reset values of global options come from a fresh [ConfigData], keeping a single source of truth for defaults.
- * Individual overrides reset to `0`, which means "use the global value".
+ * Global options reset to a fresh [ConfigData]'s values. Overrides reset to `0`, which means "use the global value".
  *
  * @author hadouz01
  * @since 1.0.0
@@ -47,10 +47,10 @@ class ModMenuIntegration : ModMenuApi {
         private val DEFAULTS = ConfigData()
 
         /**
-         * Builds and returns a screen for managing mod settings via Cloth Config GUI.
+         * Builds the config screen.
          *
-         * @param parent Target parent GUI screen to return to upon saving or closing.
-         * @return Fully configured [Screen] instance.
+         * @param parent Screen to go back to when it closes.
+         * @return The config screen.
          */
         fun createConfigScreen(parent: Screen): Screen {
             val togglesBefore = FeatureToggles.snapshot()
@@ -82,8 +82,8 @@ class ModMenuIntegration : ModMenuApi {
         }
 
         /**
-         * Appends the mechanic toggles, the Caracatron screen color and scan speed, the Hoe Fortune chance, the global default berry drawer
-         * and the default Poké Ball category drawers to the General tab.
+         * Appends the mechanic toggles, the Poké Ball materials, the Caracatron screen color and scan speed, the Hoe Fortune
+         * chance, the global default berry drawer and the default Poké Ball category drawers to the General tab.
          */
         private fun appendGeneralSettings(category: ConfigCategory, entryBuilder: ConfigEntryBuilder) {
             val data = DynamicConfig.data
@@ -96,6 +96,23 @@ class ModMenuIntegration : ModMenuApi {
                     .build()
 
             category.addEntry(toggle("custom_balls_enabled", data.customBallsEnabled, DEFAULTS.customBallsEnabled) { data.customBallsEnabled = it })
+            fun material(key: String, options: List<String>, value: String, reset: String, save: (String) -> Unit) =
+                entryBuilder.startSelector(Component.translatable("option.caraca_customs.$key"), options.toTypedArray(), value)
+                    .setDefaultValue(reset)
+                    .setNameProvider(BallMaterials::displayName)
+                    .setTooltip(Component.translatable("tooltip.caraca_customs.$key"))
+                    .setSaveConsumer { save(it) }
+                    .build()
+
+            category.addEntry(material("regular_ball_material", BallMaterials.REGULAR_OPTIONS, data.regularBallMaterial, DEFAULTS.regularBallMaterial) {
+                data.regularBallMaterial = it
+            })
+            category.addEntry(material("ultra_ball_material", BallMaterials.ULTRA_OPTIONS, data.ultraBallMaterial, DEFAULTS.ultraBallMaterial) {
+                data.ultraBallMaterial = it
+            })
+            category.addEntry(material("ultra_ball_corner_fill", BallMaterials.CORNER_OPTIONS, data.ultraBallCornerFill, DEFAULTS.ultraBallCornerFill) {
+                data.ultraBallCornerFill = it
+            })
             category.addEntry(toggle("berry_mechanics_enabled", data.berryMechanicsEnabled, DEFAULTS.berryMechanicsEnabled) { data.berryMechanicsEnabled = it })
             category.addEntry(toggle("level_cap_enabled", data.levelCapEnabled, DEFAULTS.levelCapEnabled) { data.levelCapEnabled = it })
             category.addEntry(toggle("spawn_cap_enabled", data.spawnCapEnabled, DEFAULTS.spawnCapEnabled) { data.spawnCapEnabled = it })
@@ -290,8 +307,8 @@ class ModMenuIntegration : ModMenuApi {
         /**
          * Populates the six spawn rule fields of a spawn group.
          *
-         * @param drawer Target sub-category builder drawer.
-         * @param entryBuilder Entry builder utility.
+         * @param drawer Sub-category being built.
+         * @param entryBuilder Cloth Config's entry builder.
          * @param targetEntry Entry the fields are bound to.
          * @param resetEntry Entry providing the reset values.
          */
@@ -409,8 +426,8 @@ class ModMenuIntegration : ModMenuApi {
         /**
          * Populates berry yield and growth time fields for either the global default or an individual override.
          *
-         * @param drawer Target sub-category builder drawer.
-         * @param entryBuilder Entry builder utility.
+         * @param drawer Sub-category being built.
+         * @param entryBuilder Cloth Config's entry builder.
          * @param targetEntry Entry the fields are bound to.
          * @param resetEntry Entry providing the reset values.
          * @param keySuffix Translation key segment (`berry_default` or `berry`).
@@ -454,11 +471,11 @@ class ModMenuIntegration : ModMenuApi {
         /**
          * Populates default and boosted catch rate fields.
          *
-         * @param drawer Target sub-category builder drawer.
-         * @param entryBuilder Entry builder utility.
+         * @param drawer Sub-category being built.
+         * @param entryBuilder Cloth Config's entry builder.
          * @param targetEntry Entry the fields are bound to.
          * @param resetEntry Entry providing the reset values.
-         * @param keyPrefix Translation key segment (e.g. `ball`, `ultra_default`).
+         * @param keyPrefix Translation key segment (like `ball`, `ultra_default`).
          */
         private fun appendRateFields(
             drawer: SubCategoryBuilder,
@@ -479,8 +496,8 @@ class ModMenuIntegration : ModMenuApi {
         }
 
         /**
-         * Resolves a translatable item name for a namespaced id (e.g. `cobblemon:oran_berry`)
-         * or a bare `caraca_customs` path (e.g. `caraca_ball`).
+         * Resolves a translatable item name for a namespaced id (like `cobblemon:oran_berry`)
+         * or a bare `caraca_customs` path (like `caraca_ball`).
          */
         private fun resolveItemTranslation(identifier: String): Component {
             val location = if (identifier.contains(":")) {

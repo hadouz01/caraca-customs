@@ -10,10 +10,8 @@ import net.fabricmc.loader.api.FabricLoader
 import org.slf4j.LoggerFactory
 
 /**
- * Client-side entrypoint for the `caraca_customs` Fabric mod.
- *
- * Implements [ClientModInitializer] to register configuration sync receivers, Poké Ball tooltips, the Caracatron 3000
- * item models and scanner and, when installed, the `catchrate-display` integration.
+ * Client entrypoint: config sync, Poké Ball tooltips, the Caracatron's models and scanner, and the catchrate-display
+ * integration when it's installed.
  *
  * @author hadouz01
  * @since 1.0.0

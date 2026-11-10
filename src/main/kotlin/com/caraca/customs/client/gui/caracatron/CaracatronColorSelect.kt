@@ -3,16 +3,18 @@ package com.caraca.customs.client.gui.caracatron
 import com.cobblemon.mod.common.api.gui.blitk
 import com.cobblemon.mod.common.client.render.drawScaledText
 import com.mojang.blaze3d.systems.RenderSystem
+import net.minecraft.ChatFormatting
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
+import kotlin.math.ceil
 
 /**
- * Screen color select of the Caracatron 3000, at the top center of the screen. Clicking it opens a drawer listing every
- * color folder ([CaracatronColors]) with a swatch and its name, up to [VISIBLE_ROWS] at a time, with a scroll bar when
- * there are more.
- *
- * Positions are relative to the Caracatron's top left corner. While open, the drawer takes every click: picking a color
- * selects it, clicking anywhere else closes it.
+ * Screen color select at the top of the Caracatron. Clicking it opens a drawer with every color ([CaracatronColors]),
+ * [VISIBLE_ROWS] at a time. While it's open it takes every click: a row picks that color, anywhere else closes it.
+ * Closed, it shows the name of the current page; the mouse wheel still switches colors over it. The select grows with
+ * the name it shows, centered, with its arrow right after the name.
  *
  * @param colors Color folders to choose from.
  * @param selected Color folder in use.
@@ -28,10 +30,13 @@ class CaracatronColorSelect(
 ) {
 
     companion object {
-        private const val BOX_X = 153
+        private const val CENTER_X = 173
         private const val BOX_Y = 18
-        private const val BOX_WIDTH = 40
         private const val BOX_HEIGHT = 5
+        private const val NAME_GAP = 3
+        private const val NAME_X = 6
+        private const val DRAWER_X = 147
+        private const val DRAWER_WIDTH = 52
 
         private const val DRAWER_TOP = 24
         private const val ROW_HEIGHT = 7
@@ -43,7 +48,6 @@ class CaracatronColorSelect(
         private const val SCREEN_WIDTH = 345
         private const val SCREEN_HEIGHT = 207
 
-        private const val ARROW_X = 186
         private const val ARROW_WIDTH = 12
         private const val ARROW_HEIGHT = 6
         private const val SCALE = 0.5f
@@ -67,10 +71,16 @@ class CaracatronColorSelect(
     var isOpen: Boolean = false
         private set
 
+    /**
+     * Left edge and width of the select, sized to the name it shows and centered on [CENTER_X] on every draw.
+     */
+    private var boxX = DRAWER_X
+    private var boxWidth = DRAWER_WIDTH
+
     private val rows: Int get() = colors.size.coerceAtMost(VISIBLE_ROWS)
     private val drawerBottom: Int get() = DRAWER_TOP + rows * ROW_HEIGHT
 
-    private val scroll = CaracatronScrollBar(BOX_X + BOX_WIDTH - 3, DRAWER_TOP + 1, DRAWER_TOP + VISIBLE_ROWS * ROW_HEIGHT - 1, 2, 1, 6)
+    private val scroll = CaracatronScrollBar(DRAWER_X + DRAWER_WIDTH - 3, DRAWER_TOP + 1, DRAWER_TOP + VISIBLE_ROWS * ROW_HEIGHT - 1, 2, 1, 6)
 
     /**
      * Draws the select and, while open, the drawer over everything else.
@@ -80,8 +90,8 @@ class CaracatronColorSelect(
      * @param originY Caracatron's top edge on screen.
      * @param mouseX Mouse x relative to the Caracatron.
      * @param mouseY Mouse y relative to the Caracatron.
-     * @param textColors Text colors of the color in use, for the name on the select. The drawer keeps white text over its
-     * own dark background.
+     * @param pageName Name of the page being shown, written in bold on the select while it's closed. While it's open, the
+     * select shows the color in use, like the drawer.
      */
     fun render(
         context: GuiGraphics,
@@ -89,14 +99,20 @@ class CaracatronColorSelect(
         originY: Int,
         mouseX: Double,
         mouseY: Double,
-        textColors: CaracatronTextColors
+        pageName: Component
     ) {
+        val label = if (isOpen) CaracatronColors.displayName(selected).copy() else pageName.copy().withStyle(ChatFormatting.BOLD)
+        val nameWidth = ceil(Minecraft.getInstance().font.width(label) * SCALE).toInt()
+        boxWidth = NAME_X + nameWidth + NAME_GAP + (ARROW_WIDTH * SCALE).toInt() + 1
+        boxX = CENTER_X - boxWidth / 2
+
         if (!isOpen && isOverBox(mouseX, mouseY)) {
-            context.fill(originX + BOX_X, originY + BOX_Y, originX + BOX_X + BOX_WIDTH, originY + BOX_Y + BOX_HEIGHT, HOVER_COLOR)
+            context.fill(originX + boxX, originY + BOX_Y, originX + boxX + boxWidth, originY + BOX_Y + BOX_HEIGHT, HOVER_COLOR)
         }
-        swatch(context, selected, originX + BOX_X + 1.0f, originY + BOX_Y + 1.0f, BOX_SWATCH_SIZE)
-        textColors.drawScreenText(context, CaracatronColors.displayName(selected).copy(), originX + BOX_X + 6, originY + BOX_Y + 0.5, scale = SCALE)
-        arrow(context, CaracatronColors.icon("select_arrow"), originX + ARROW_X.toFloat(), originY + BOX_Y + 1.0f, pointingUp = isOpen)
+        swatch(context, selected, originX + boxX + 1.0f, originY + BOX_Y + 1.0f, BOX_SWATCH_SIZE)
+        CaracatronTextColors.drawHeaderText(context, label, originX + boxX + NAME_X, originY + BOX_Y + 0.5, scale = SCALE)
+        val arrowX = boxX + NAME_X + nameWidth + NAME_GAP
+        arrow(context, CaracatronColors.icon("select_arrow"), originX + arrowX.toFloat(), originY + BOX_Y + 1.0f, pointingUp = isOpen)
 
         if (isOpen) renderDrawer(context, originX, originY, mouseX, mouseY)
     }
@@ -112,10 +128,10 @@ class CaracatronColorSelect(
         pose.pushPose()
         pose.translate(0.0f, 0.0f, DRAWER_Z)
 
-        val left = originX + BOX_X
-        val right = left + BOX_WIDTH
+        val left = originX + DRAWER_X
+        val right = left + DRAWER_WIDTH
         context.fill(left, originY + DRAWER_TOP, right, originY + drawerBottom, DRAWER_COLOR)
-        context.renderOutline(left - 1, originY + DRAWER_TOP - 1, BOX_WIDTH + 2, rows * ROW_HEIGHT + 2, DRAWER_BORDER)
+        context.renderOutline(left - 1, originY + DRAWER_TOP - 1, DRAWER_WIDTH + 2, rows * ROW_HEIGHT + 2, DRAWER_BORDER)
 
         val hovered = rowAt(mouseX, mouseY)
         context.enableScissor(left, originY + DRAWER_TOP, right, originY + drawerBottom)
@@ -237,11 +253,11 @@ class CaracatronColorSelect(
     }
 
     private fun isOverBox(mouseX: Double, mouseY: Double): Boolean {
-        return mouseX >= BOX_X && mouseX < BOX_X + BOX_WIDTH && mouseY >= BOX_Y && mouseY < BOX_Y + BOX_HEIGHT
+        return mouseX >= boxX && mouseX < boxX + boxWidth && mouseY >= BOX_Y && mouseY < BOX_Y + BOX_HEIGHT
     }
 
     private fun isOverDrawer(mouseX: Double, mouseY: Double): Boolean {
-        return isOpen && mouseX >= BOX_X && mouseX < BOX_X + BOX_WIDTH && mouseY >= DRAWER_TOP && mouseY < drawerBottom
+        return isOpen && mouseX >= DRAWER_X && mouseX < DRAWER_X + DRAWER_WIDTH && mouseY >= DRAWER_TOP && mouseY < drawerBottom
     }
 
     /**
@@ -249,7 +265,7 @@ class CaracatronColorSelect(
      */
     private fun rowAt(mouseX: Double, mouseY: Double): Int {
         if (!isOverDrawer(mouseX, mouseY)) return -1
-        if (colors.size > VISIBLE_ROWS && mouseX >= BOX_X + BOX_WIDTH - 4) return -1
+        if (colors.size > VISIBLE_ROWS && mouseX >= DRAWER_X + DRAWER_WIDTH - 4) return -1
         val index = ((mouseY - DRAWER_TOP + scroll.offset) / ROW_HEIGHT).toInt()
         return if (index in colors.indices) index else -1
     }

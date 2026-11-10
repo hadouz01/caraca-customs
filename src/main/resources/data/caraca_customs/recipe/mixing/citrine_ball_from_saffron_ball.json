@@ -1,0 +1,17 @@
+{
+    "fabric:load_conditions": [
+        { "condition": "caraca_customs:feature_enabled", "feature": "custom_balls" }
+    ],
+    "type": "minecraft:crafting_shapeless",
+    "category": "equipment",
+    "group": "basic_balls",
+    "ingredients": [
+        { "item": "caraca_customs:saffron_ball" },
+        { "item": "cobblemon:yellow_apricorn" },
+        { "item": "cobblemon:yellow_apricorn" }
+    ],
+    "result": {
+        "count": 1,
+        "id": "caraca_customs:citrine_ball"
+    }
+}

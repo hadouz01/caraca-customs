@@ -18,18 +18,12 @@ import kotlin.math.roundToInt
 /**
  * Exp. Share All: every player-owned party member earns experience when one of them defeats an opponent.
  *
- * The experience the active Pokémon would earn, without its own held item boost, is the base handed to the party:
- * - **Shared, equally:** every member gets `base / members`.
- * - **Shared, balanced:** the active Pokémon keep half and the rest of the party splits the other half.
- * - **Multiplied:** the active Pokémon keep their full experience and every other member gets `base * multiplier`.
+ * The active Pokémon's experience, without its held item boost, is split (equally, or half for the active Pokémon) or
+ * copied with a multiplier. Each member's own Lucky Egg or Exp. Share only boosts its own slice, and benched members get
+ * no EVs unless they really hold an Exp. Share.
  *
- * Each member's own held item boosts only its own slice: a Lucky Egg by Cobblemon's Lucky Egg multiplier, and an
- * Exp. Share by the configured bonus for every party member holding a Lucky Egg, split between every Exp. Share holder.
- * Benched members get experience only, no EVs, unless they really hold an Exp. Share.
- *
- * Cobblemon only lets benched Pokémon reach the experience calculator when they hold an Exp. Share, so
- * `ExpShareAllMixin` lets every member in while this is on. Every slice still goes through Cobblemon's experience event,
- * so [LevelCapHandler] keeps trimming it at the level cap, and through Cobblemon's battle loss and fainted Pokémon rules.
+ * `ExpShareAllMixin` lets every member reach the calculator, and every slice still goes through Cobblemon's experience
+ * event, so the level cap and Cobblemon's battle rules still apply.
  *
  * @author hadouz01
  * @since 1.11.0

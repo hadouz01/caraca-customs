@@ -21,12 +21,12 @@ import net.minecraft.world.level.storage.LevelResource
 import java.util.UUID
 
 /**
- * Server-side command registry and execution handler for the `/caraca` node.
+ * The `/caraca` command.
  *
- * - `/caraca reload` (operators): reloads the configuration.
- * - `/caraca tier`: shows the caller's progression tier.
- * - `/caraca tier <player>` (operators): shows another player's progression tier.
- * - `/caraca sharedex rebuild` (operators): fills the shared Pokédex with the captures of every player who ever joined.
+ * - `/caraca reload` (ops): reloads the config.
+ * - `/caraca tier`: shows your tier.
+ * - `/caraca tier <player>` (ops): shows another player's tier.
+ * - `/caraca sharedex rebuild` (ops): fills the shared Pokédex with the captures of everyone who ever joined.
  *
  * @author hadouz01
  * @since 1.0.0
