@@ -19,6 +19,18 @@ repositories {
 		name = "TerraformersMC"
 		url = uri("https://maven.terraformersmc.com/releases/")
 	}
+
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = "Modrinth"
+				url = uri("https://api.modrinth.com/maven")
+			}
+		}
+		filter {
+			includeGroup("maven.modrinth")
+		}
+	}
 }
 
 fabricApi {
@@ -45,8 +57,8 @@ dependencies {
 	// Mod Menu Integration
 	modCompileOnly("com.terraformersmc:modmenu:11.0.1")
 
-	// Cobblemon JAR
-	modImplementation(files("libs/Cobblemon-fabric-1.8.4+1.21.1.jar"))
+	// Cobblemon
+	modImplementation("maven.modrinth:cobblemon:${providers.gradleProperty("cobblemon_modrinth_version").get()}")
 
 	val graalVersion = providers.gradleProperty("graal_version").get()
 	modRuntimeOnly("org.graalvm.js:js:$graalVersion")
@@ -55,8 +67,8 @@ dependencies {
 	modRuntimeOnly("org.graalvm.truffle:truffle-api:$graalVersion")
 	minecraftServerLibraries("com.ibm.icu:icu4j:${providers.gradleProperty("icu4j_version").get()}")
 
-	// catchrate-display-fabric JAR
-	modCompileOnly(files("libs/catchrate-display-fabric-2.12.3.jar"))
+	// catchrate-display
+	modCompileOnly("maven.modrinth:catch-rate-display:${providers.gradleProperty("catchrate_display_version").get()}")
 }
 
 tasks.processResources {
