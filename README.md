@@ -1,5 +1,7 @@
 # Caraca Customs
 
+**English** | [Português (Brasil)](README.pt-BR.md)
+
 A Fabric add-on for **Cobblemon** 1.8.4 on Minecraft 1.21.1. It works in singleplayer and on dedicated servers, and every mechanic can be turned on or off and tuned in-game (Mod Menu) or through a single JSON file.
 
 Full explanations of every mechanic live in the [Wiki](https://github.com/hadouz01/caraca-customs/wiki).
